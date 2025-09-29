@@ -16,8 +16,8 @@ A comprehensive real-time monitoring dashboard for Monad blockchain nodes, inspi
 ## Architecture
 
 ```
-┌─────────────────┐    WebSocket/HTTP    ┌──────────────────┐
-│  Web Frontend   │ ◄─────────────────► │  Dashboard Server │
+┌─────────────────┐    WebSocket/HTTP   ┌──────────────────┐
+│  Web Frontend   │ ◄─────────────────► │ Dashboard Server │
 │  (React/TS)     │                     │  (Go/Gin)        │
 └─────────────────┘                     └──────────────────┘
                                                 │
