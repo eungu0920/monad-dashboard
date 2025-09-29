@@ -1,0 +1,41 @@
+[server]
+bind_address = "0.0.0.0"  # Allow external connections
+port = 3000  # Use different port to avoid conflict with monad-rpc
+
+[monad]
+# Monad RPC Server connection (the actual JSON-RPC endpoint)
+rpc_url = "http://127.0.0.1:8080"
+ws_url = "ws://127.0.0.1:8081"
+
+# Monad BFT connection (IPC only - no HTTP RPC)
+bft_ipc_path = "/tmp/monad-bft.sock"
+bft_network_port = 8000
+
+# Monad Execution connection (IPC with BFT)
+execution_ipc_path = "/tmp/monad-execution.sock"
+
+# Node information
+node_name = "monad-validator-ubuntu"
+chain_id = 20143
+
+[metrics]
+# Collection interval in milliseconds
+collection_interval = 1000
+
+# How long to keep historical data (seconds)
+history_retention = 3600
+
+# Enable detailed logging
+debug_logging = true
+
+[security]
+# Allow connections from specific IPs (empty = allow all)
+allowed_ips = []
+
+# Enable CORS for development
+enable_cors = true
+
+[logging]
+level = "info"
+format = "json"  # or "text"
+file = "/var/log/monad-dashboard.log"

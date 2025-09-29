@@ -1,0 +1,35 @@
+[Unit]
+Description=Monad Dashboard
+Documentation=https://github.com/your-org/monad-dashboard
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/monad
+ExecStart=/opt/monad/monad-dashboard
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/monad /var/log
+
+# Environment
+Environment=GIN_MODE=release
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=monad-dashboard
+
+[Install]
+WantedBy=multi-user.target
