@@ -5,13 +5,15 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
-//go:embed frontend/dist/*
+//go:embed frontend/dist
 var static embed.FS
 
 var upgrader = websocket.Upgrader{
@@ -36,6 +38,37 @@ func main() {
 		if c.Request.URL.Path != "/" && !gin.IsDebugging() {
 			c.Header("Cache-Control", "no-cache")
 		}
+
+		// Try to serve static files first
+		if c.Request.URL.Path != "/" && c.Request.URL.Path != "/ws" &&
+		   !strings.HasPrefix(c.Request.URL.Path, "/api") {
+			file, err := static.ReadFile("frontend/dist" + c.Request.URL.Path)
+			if err == nil {
+				// Determine content type
+				ext := filepath.Ext(c.Request.URL.Path)
+				var contentType string
+				switch ext {
+				case ".js":
+					contentType = "application/javascript"
+				case ".css":
+					contentType = "text/css"
+				case ".html":
+					contentType = "text/html; charset=utf-8"
+				case ".json":
+					contentType = "application/json"
+				case ".png":
+					contentType = "image/png"
+				case ".svg":
+					contentType = "image/svg+xml"
+				default:
+					contentType = "application/octet-stream"
+				}
+				c.Data(http.StatusOK, contentType, file)
+				return
+			}
+		}
+
+		// Fall back to index.html for SPA routing
 		indexHTML, err := static.ReadFile("frontend/dist/index.html")
 		if err != nil {
 			c.String(http.StatusNotFound, "Frontend not built. Run 'make frontend' first.")
