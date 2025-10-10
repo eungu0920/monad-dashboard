@@ -83,10 +83,20 @@ func main() {
 		api.GET("/health", handleHealth)
 		api.GET("/metrics", handleMetrics)
 		api.GET("/waterfall", handleWaterfall)
+		api.GET("/event-rings", handleEventRingsStatus)
 	}
 
 	// WebSocket endpoint
 	r.GET("/ws", handleWebSocket)
+
+	// Initialize event rings connection
+	if err := InitializeEventRings(); err != nil {
+		log.Printf("Event rings not available: %v", err)
+		log.Printf("Dashboard will use RPC-only mode")
+	} else {
+		// Start event processing if event rings are available
+		go StartEventProcessing()
+	}
 
 	// Start metrics collection
 	go startMetricsCollection()
@@ -102,6 +112,20 @@ func handleHealth(c *gin.Context) {
 		"timestamp": time.Now().Unix(),
 		"version":   "0.1.0",
 	})
+}
+
+func handleEventRingsStatus(c *gin.Context) {
+	reader := GetExecutionEventReader()
+	if reader == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"connected": false,
+			"message":   "Event rings not initialized",
+		})
+		return
+	}
+
+	stats := reader.GetStats()
+	c.JSON(http.StatusOK, stats)
 }
 
 func handleWebSocket(c *gin.Context) {
@@ -120,6 +144,15 @@ func handleWebSocket(c *gin.Context) {
 		select {
 		case <-ticker.C:
 			metrics := getCurrentMetrics()
+
+			// Add event rings status to metrics
+			reader := GetExecutionEventReader()
+			if reader != nil {
+				eventStats := reader.GetStats()
+				metrics.Timestamp = time.Now().Unix()
+				// Add event stats to the response (you could extend MonadMetrics struct)
+			}
+
 			if err := conn.WriteJSON(metrics); err != nil {
 				log.Printf("WebSocket write error: %v", err)
 				return

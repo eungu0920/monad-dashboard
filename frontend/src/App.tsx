@@ -3,6 +3,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { MetricCard } from './components/MetricCard';
 import { WaterfallChart } from './components/WaterfallChart';
 import { ThroughputChart } from './components/ThroughputChart';
+import { EventRingsStatus } from './components/EventRingsStatus';
 import type { MonadMetrics, WaterfallData, ExecutionMetrics } from './types';
 
 function App() {
@@ -160,6 +161,9 @@ function App() {
 
       {/* Throughput Chart */}
       <ThroughputChart data={throughputHistory} />
+
+      {/* Event Rings Status */}
+      <EventRingsStatus />
 
       {/* Additional Metrics */}
       <div className="metrics-grid">
