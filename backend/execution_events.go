@@ -309,12 +309,14 @@ func InitializeEventRings() error {
 	eventReaderMutex.Lock()
 	defer eventReaderMutex.Unlock()
 
-	// Initialize execution event reader
-	executionEventReader = NewEventRingReader("/tmp/monad-execution-events.sock")
+	// Initialize execution event reader with actual Monad socket path
+	// Try mempool socket first (most likely to have execution events)
+	socketPath := "/home/monad/monad-bft/mempool.sock"
+	executionEventReader = NewEventRingReader(socketPath)
 
-	// Try to connect (will fallback gracefully if socket doesn't exist)
-	if err := executionEventReader.Connect("/tmp/monad-execution-events.sock"); err != nil {
-		log.Printf("Failed to connect to execution events: %v", err)
+	// Try to connect (will fallback gracefully if socket doesn't exist or doesn't support events)
+	if err := executionEventReader.Connect(socketPath); err != nil {
+		log.Printf("Failed to connect to execution events at %s: %v", socketPath, err)
 		log.Printf("Event ring features will be disabled")
 		return err
 	}

@@ -93,11 +93,11 @@ var (
 var monadClient *MonadClient
 
 func init() {
-	// Initialize Monad client - these paths should be configurable
+	// Initialize Monad client with actual socket paths
 	monadClient = NewMonadClient(
-		"http://127.0.0.1:8080",     // Monad RPC Server
-		"/tmp/monad-bft.sock",       // BFT IPC
-		"/tmp/monad-execution.sock", // Execution IPC
+		"http://127.0.0.1:8080",                           // Monad RPC Server
+		"/home/monad/monad-bft/controlpanel.sock",        // BFT Control Panel IPC
+		"/home/monad/monad-bft/mempool.sock",             // Mempool IPC
 	)
 }
 
