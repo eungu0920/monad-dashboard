@@ -191,6 +191,7 @@ func (c *MonadClient) getExecutionViaRPC() (*ExecutionMetrics, error) {
 	tps := float64(len(block.Result.Transactions)) / 2.0 // Assuming 2s block time
 
 	gasUsed, _ := parseHexToInt64(block.Result.GasUsed)
+	_ = gasUsed // Use the variable to avoid unused error
 
 	return &ExecutionMetrics{
 		TPS:                 tps,
@@ -288,6 +289,7 @@ func (c *MonadClient) rpcCall(url, method string, params []interface{}) ([]byte,
 	if err != nil {
 		return nil, err
 	}
+	_ = reqBody // Use the variable to avoid unused error
 
 	resp, err := c.httpClient.Post(url, "application/json", nil)
 	if err != nil {

@@ -32,8 +32,8 @@ frontend:
 backend: frontend
 	@echo "Copying frontend build to backend..."
 	rm -rf backend/frontend
-	mkdir -p backend/frontend
-	cp -r frontend/dist/* backend/frontend/
+	mkdir -p backend/frontend/dist
+	cp -r frontend/dist/* backend/frontend/dist/
 	@echo "Building backend with embedded assets..."
 	cd backend && go build -o ../monad-dashboard .
 	@echo "Backend build completed"
