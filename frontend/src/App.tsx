@@ -1,8 +1,8 @@
 import React from 'react';
-import { FiredancerDashboard } from './components/FiredancerDashboard';
+import { AuthenticFiredancerDashboard } from './components/AuthenticFiredancerDashboard';
 
 function App() {
-  return <FiredancerDashboard />;
+  return <AuthenticFiredancerDashboard />;
 }
 
 export default App;

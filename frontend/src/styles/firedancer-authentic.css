@@ -1,0 +1,474 @@
+/* Authentic Firedancer GUI Recreation */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Authentic Firedancer Colors */
+  --fd-bg-primary: #0f1419;
+  --fd-bg-secondary: #1a1f2b;
+  --fd-bg-tertiary: #252b37;
+  --fd-bg-panel: #1e242f;
+  --fd-bg-card: #242a36;
+
+  /* Text Colors */
+  --fd-text-primary: #ffffff;
+  --fd-text-secondary: #b8bcc8;
+  --fd-text-muted: #8b909c;
+  --fd-text-dim: #6b7280;
+
+  /* Accent Colors */
+  --fd-accent-cyan: #22d3ee;
+  --fd-accent-blue: #3b82f6;
+  --fd-accent-teal: #14b8a6;
+  --fd-accent-emerald: #10b981;
+  --fd-accent-lime: #84cc16;
+  --fd-accent-yellow: #eab308;
+  --fd-accent-orange: #f97316;
+  --fd-accent-red: #ef4444;
+  --fd-accent-purple: #8b5cf6;
+
+  /* Status Colors */
+  --fd-status-success: #10b981;
+  --fd-status-warning: #f59e0b;
+  --fd-status-error: #ef4444;
+  --fd-status-info: #3b82f6;
+
+  /* Borders */
+  --fd-border: #374151;
+  --fd-border-light: #4b5563;
+  --fd-border-dim: #2d3748;
+
+  /* Shadows */
+  --fd-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --fd-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--fd-bg-primary);
+  color: var(--fd-text-primary);
+  overflow-x: auto;
+  line-height: 1.5;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Main Container */
+.firedancer-authentic {
+  background: var(--fd-bg-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top Navigation Bar */
+.firedancer-navbar {
+  background: var(--fd-bg-secondary);
+  border-bottom: 1px solid var(--fd-border);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+}
+
+.firedancer-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--fd-accent-cyan), var(--fd-accent-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.logo-text {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--fd-text-primary);
+}
+
+.network-badge {
+  background: var(--fd-accent-teal);
+  color: var(--fd-bg-primary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.navbar-center {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.nav-item {
+  color: var(--fd-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  color: var(--fd-text-primary);
+  background: var(--fd-bg-tertiary);
+}
+
+.nav-item.active {
+  color: var(--fd-accent-cyan);
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--fd-text-muted);
+}
+
+.epoch-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.realtime-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fd-status-success);
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fd-status-success);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Main Content Grid */
+.firedancer-main {
+  flex: 1;
+  padding: 16px 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  grid-template-areas:
+    "status transactions validators"
+    "waterfall waterfall waterfall"
+    "pipeline pipeline pipeline";
+}
+
+/* Panel Base Style */
+.firedancer-panel {
+  background: var(--fd-bg-panel);
+  border: 1px solid var(--fd-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panel-header {
+  background: var(--fd-bg-tertiary);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--fd-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fd-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-content {
+  padding: 16px;
+}
+
+/* Status Panel */
+.status-panel {
+  grid-area: status;
+}
+
+.status-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-label {
+  font-size: 11px;
+  color: var(--fd-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--fd-text-primary);
+}
+
+.status-subvalue {
+  font-size: 12px;
+  color: var(--fd-text-secondary);
+}
+
+.status-secondary {
+  font-size: 11px;
+  color: var(--fd-text-muted);
+}
+
+/* Transactions Panel */
+.transactions-panel {
+  grid-area: transactions;
+  position: relative;
+}
+
+.transactions-chart {
+  height: 120px;
+  background: var(--fd-bg-secondary);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tps-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.tps-metric {
+  text-align: center;
+}
+
+.tps-value {
+  font-size: 18px;
+  font-weight: 600;
+  display: block;
+}
+
+.tps-value.success { color: var(--fd-status-success); }
+.tps-value.error { color: var(--fd-status-error); }
+.tps-value.info { color: var(--fd-accent-cyan); }
+
+.tps-label {
+  font-size: 10px;
+  color: var(--fd-text-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Validators Panel */
+.validators-panel {
+  grid-area: validators;
+}
+
+.validators-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.validator-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.validator-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--fd-accent-cyan);
+}
+
+.validator-stake {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+.validator-percentage {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fd-status-success);
+}
+
+.delinquent-info {
+  color: var(--fd-status-error);
+}
+
+/* TPU Waterfall */
+.waterfall-panel {
+  grid-area: waterfall;
+  min-height: 300px;
+}
+
+.waterfall-canvas {
+  width: 100%;
+  height: 250px;
+  position: relative;
+  background: var(--fd-bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Pipeline Stages */
+.pipeline-panel {
+  grid-area: pipeline;
+}
+
+.pipeline-stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1px;
+  background: var(--fd-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pipeline-stage {
+  background: var(--fd-bg-card);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.pipeline-stage:hover {
+  background: var(--fd-bg-tertiary);
+}
+
+.stage-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fd-text-secondary);
+  text-align: center;
+}
+
+.stage-chart {
+  width: 100%;
+  height: 40px;
+  background: var(--fd-bg-secondary);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stage-metrics {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 10px;
+  color: var(--fd-text-muted);
+}
+
+.stage-value {
+  font-weight: 600;
+  color: var(--fd-text-primary);
+}
+
+/* Sparkline Charts */
+.sparkline {
+  width: 100%;
+  height: 100%;
+}
+
+.sparkline path {
+  fill: none;
+  stroke: var(--fd-accent-cyan);
+  stroke-width: 1.5;
+}
+
+.sparkline .area {
+  fill: rgba(34, 211, 238, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .firedancer-main {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "status transactions"
+      "validators validators"
+      "waterfall waterfall"
+      "pipeline pipeline";
+  }
+}
+
+@media (max-width: 768px) {
+  .firedancer-navbar {
+    padding: 8px 16px;
+  }
+
+  .navbar-center {
+    display: none;
+  }
+
+  .firedancer-main {
+    padding: 12px 16px;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "status"
+      "transactions"
+      "validators"
+      "waterfall"
+      "pipeline";
+  }
+
+  .pipeline-stages {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
