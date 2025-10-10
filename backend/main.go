@@ -91,8 +91,9 @@ func main() {
 	// Start metrics collection
 	go startMetricsCollection()
 
-	log.Println("Monad Dashboard starting on :3000")
-	log.Fatal(r.Run(":3000"))
+	port := ":4000" // Changed from 3000 to 4000
+	log.Printf("Monad Dashboard starting on %s", port)
+	log.Fatal(r.Run(port))
 }
 
 func handleHealth(c *gin.Context) {
