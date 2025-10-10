@@ -41,28 +41,50 @@ export function TPUWaterfall({ data, width = 800, height = 250 }: TPUWaterfallPr
   }, [data]);
 
   const createMonadPipeline = () => {
+    // Monad's actual transaction processing pipeline
     const pipelineNodes: FlowNode[] = [
-      { id: 'rpc', name: 'RPC\nIngress', x: 50, y: 50, width: 80, height: 60, value: 8916, color: '#22d3ee' },
-      { id: 'gossip', name: 'Gossip\nReceived', x: 50, y: 140, width: 80, height: 60, value: 822, color: '#3b82f6' },
+      { id: 'rpc_ingress', name: 'RPC\nIngress', x: 50, y: 50, width: 80, height: 60, value: 8916, color: '#22d3ee' },
+      { id: 'gossip_received', name: 'Gossip\nReceived', x: 50, y: 140, width: 80, height: 60, value: 822, color: '#3b82f6' },
       { id: 'mempool', name: 'Mempool', x: 200, y: 95, width: 80, height: 60, value: 9738, color: '#14b8a6' },
-      { id: 'verify', name: 'Signature\nVerify', x: 350, y: 95, width: 80, height: 60, value: 9631, color: '#10b981' },
-      { id: 'dedup', name: 'Nonce\nDedup', x: 500, y: 95, width: 80, height: 60, value: 4834, color: '#84cc16' },
-      { id: 'evm', name: 'EVM\nExecution', x: 650, y: 95, width: 80, height: 60, value: 1627, color: '#eab308' },
-      { id: 'pack', name: 'Block\nPacking', x: 800, y: 50, width: 80, height: 60, value: 1622, color: '#f97316' },
-      { id: 'consensus', name: 'BFT\nConsensus', x: 800, y: 140, width: 80, height: 60, value: 13, color: '#ef4444' },
-      { id: 'store', name: 'State\nStore', x: 950, y: 95, width: 80, height: 60, value: 13, color: '#8b5cf6' }
+      { id: 'signature_verify', name: 'Signature\nVerify', x: 350, y: 50, width: 80, height: 60, value: 9631, color: '#10b981' },
+      { id: 'nonce_dedup', name: 'Nonce\nDedup', x: 350, y: 140, width: 80, height: 60, value: 4834, color: '#84cc16' },
+      { id: 'gas_validation', name: 'Gas\nValidation', x: 500, y: 95, width: 80, height: 60, value: 4500, color: '#eab308' },
+      { id: 'evm_parallel', name: 'EVM\nParallel', x: 650, y: 50, width: 80, height: 60, value: 3800, color: '#f97316' },
+      { id: 'evm_sequential', name: 'EVM\nSequential', x: 650, y: 140, width: 80, height: 60, value: 700, color: '#ef4444' },
+      { id: 'state_conflicts', name: 'State\nConflicts', x: 800, y: 95, width: 80, height: 60, value: 450, color: '#8b5cf6' },
+      { id: 'bft_consensus', name: 'BFT\nConsensus', x: 950, y: 50, width: 80, height: 60, value: 4050, color: '#22d3ee' },
+      { id: 'block_commit', name: 'Block\nCommit', x: 950, y: 140, width: 80, height: 60, value: 4050, color: '#14b8a6' },
+      { id: 'state_update', name: 'State\nUpdate', x: 1100, y: 95, width: 80, height: 60, value: 4050, color: '#10b981' }
     ];
 
     const pipelineLinks: FlowLink[] = [
-      { source: 'rpc', target: 'mempool', value: 8916, color: '#22d3ee' },
-      { source: 'gossip', target: 'mempool', value: 822, color: '#3b82f6' },
-      { source: 'mempool', target: 'verify', value: 9631, color: '#14b8a6' },
-      { source: 'verify', target: 'dedup', value: 4834, color: '#10b981' },
-      { source: 'dedup', target: 'evm', value: 1627, color: '#84cc16' },
-      { source: 'evm', target: 'pack', value: 1622, color: '#eab308' },
-      { source: 'evm', target: 'consensus', value: 13, color: '#eab308' },
-      { source: 'pack', target: 'store', value: 13, color: '#f97316' },
-      { source: 'consensus', target: 'store', value: 13, color: '#ef4444' }
+      // Ingress to mempool
+      { source: 'rpc_ingress', target: 'mempool', value: 8916, color: '#22d3ee' },
+      { source: 'gossip_received', target: 'mempool', value: 822, color: '#3b82f6' },
+
+      // Mempool to validation stages
+      { source: 'mempool', target: 'signature_verify', value: 4869, color: '#14b8a6' },
+      { source: 'mempool', target: 'nonce_dedup', value: 4869, color: '#14b8a6' },
+
+      // Validation to gas check
+      { source: 'signature_verify', target: 'gas_validation', value: 4500, color: '#10b981' },
+      { source: 'nonce_dedup', target: 'gas_validation', value: 4500, color: '#84cc16' },
+
+      // Gas validation to EVM execution
+      { source: 'gas_validation', target: 'evm_parallel', value: 3800, color: '#eab308' },
+      { source: 'gas_validation', target: 'evm_sequential', value: 700, color: '#eab308' },
+
+      // EVM execution to state conflicts
+      { source: 'evm_parallel', target: 'state_conflicts', value: 3800, color: '#f97316' },
+      { source: 'evm_sequential', target: 'state_conflicts', value: 700, color: '#ef4444' },
+
+      // State conflicts resolution to consensus
+      { source: 'state_conflicts', target: 'bft_consensus', value: 4050, color: '#8b5cf6' },
+      { source: 'state_conflicts', target: 'block_commit', value: 4050, color: '#8b5cf6' },
+
+      // Consensus and commit to final state update
+      { source: 'bft_consensus', target: 'state_update', value: 4050, color: '#22d3ee' },
+      { source: 'block_commit', target: 'state_update', value: 4050, color: '#14b8a6' }
     ];
 
     // Calculate link paths

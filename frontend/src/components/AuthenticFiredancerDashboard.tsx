@@ -176,20 +176,22 @@ export function AuthenticFiredancerDashboard() {
         <div className="firedancer-logo">
           <div className="logo-icon">M</div>
           <span className="logo-text">monad</span>
-          <span className="network-badge">mainnet</span>
+          <span className="network-badge">v{metrics.node_info.version}</span>
         </div>
 
         <div className="navbar-center">
           <div className="nav-item active">Overview</div>
-          <div className="nav-item">Leader Schedule</div>
-          <div className="nav-item">Gossip</div>
+          <div className="nav-item">Validators</div>
+          <div className="nav-item">Network</div>
         </div>
 
         <div className="navbar-right">
           <div className="epoch-info">
-            <span>Epoch {Math.floor(metrics.consensus.current_height / 432000)}</span>
+            <span>Block #{formatNumber(metrics.consensus.current_height)}</span>
             <span>•</span>
             <span>{connected ? 'ONLINE' : 'OFFLINE'}</span>
+            <span>•</span>
+            <span>Chain {metrics.node_info.chain_id}</span>
           </div>
           <div className="realtime-indicator">
             <div className="pulse-dot"></div>
@@ -197,6 +199,7 @@ export function AuthenticFiredancerDashboard() {
           </div>
           <span>{metrics.node_info.node_name}</span>
           <span>UP {formatUptime(metrics.node_info.uptime)}</span>
+          <span>TPS: {metrics.execution.tps.toFixed(1)}</span>
         </div>
       </div>
 
@@ -204,28 +207,28 @@ export function AuthenticFiredancerDashboard() {
       <div className="firedancer-main">
         {/* Status Panel */}
         <div className="firedancer-panel status-panel">
-          <div className="panel-header">Status</div>
+          <div className="panel-header">Node Status</div>
           <div className="panel-content">
             <div className="status-grid">
               <div className="status-item">
-                <div className="status-label">Slot</div>
+                <div className="status-label">Block Height</div>
                 <div className="status-value">{formatNumber(metrics.consensus.current_height)}</div>
               </div>
 
               <div className="status-item">
-                <div className="status-label">Vote Status</div>
-                <div className="status-subvalue">voting</div>
-                <div className="status-secondary">1 behind</div>
+                <div className="status-label">Consensus Status</div>
+                <div className="status-subvalue">{connected ? 'synced' : 'syncing'}</div>
+                <div className="status-secondary">{(metrics.consensus.participation_rate * 100).toFixed(1)}% participation</div>
               </div>
 
               <div className="status-item">
-                <div className="status-label">Time until leader</div>
-                <div className="status-value">{Math.floor(Math.random() * 20)}m {Math.floor(Math.random() * 60)}s</div>
+                <div className="status-label">Block Time</div>
+                <div className="status-value">{metrics.consensus.block_time.toFixed(1)}s</div>
               </div>
 
               <div className="status-item">
-                <div className="status-label">Next leader slot</div>
-                <div className="status-value">{formatNumber(metrics.consensus.current_height + Math.floor(Math.random() * 1000))}</div>
+                <div className="status-label">Last Block Time</div>
+                <div className="status-value">{Math.floor((Date.now() / 1000 - metrics.consensus.last_block_time))}s ago</div>
               </div>
             </div>
           </div>
@@ -265,47 +268,47 @@ export function AuthenticFiredancerDashboard() {
             <div className="tps-metrics">
               <div className="tps-metric">
                 <span className="tps-value success">
-                  {(metrics.execution.tps * 0.8).toFixed(0)}
+                  {Math.floor(metrics.waterfall.evm_parallel_executed / 10)}
                 </span>
-                <div className="tps-label">Non-vote TPS Success</div>
+                <div className="tps-label">Parallel Success</div>
               </div>
               <div className="tps-metric">
                 <span className="tps-value error">
-                  {(metrics.execution.tps * 0.1).toFixed(0)}
+                  {Math.floor(metrics.waterfall.signature_failed + metrics.waterfall.gas_invalid)}
                 </span>
-                <div className="tps-label">Non-vote TPS Fail</div>
+                <div className="tps-label">Validation Fail</div>
               </div>
               <div className="tps-metric">
                 <span className="tps-value info">
-                  {(metrics.execution.tps * 1.5).toFixed(0)}
+                  {Math.floor(metrics.waterfall.mempool_size / 100)}
                 </span>
-                <div className="tps-label">Vote TPS</div>
+                <div className="tps-label">Mempool Size</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Validators Panel */}
+        {/* Network Panel */}
         <div className="firedancer-panel validators-panel">
-          <div className="panel-header">Validators</div>
+          <div className="panel-header">Network & Consensus</div>
           <div className="panel-content">
             <div className="validators-grid">
               <div className="validator-metric">
-                <div className="status-label">Total Validators</div>
+                <div className="status-label">Active Validators</div>
                 <div className="validator-count">{metrics.consensus.validator_count}</div>
               </div>
               <div className="validator-metric">
-                <div className="status-label">Non-delinquent Stake</div>
-                <div className="validator-stake">{formatNumber(metrics.consensus.voting_power)}SOL</div>
+                <div className="status-label">Total Voting Power</div>
+                <div className="validator-stake">{formatNumber(metrics.consensus.voting_power)} MONAD</div>
               </div>
               <div className="validator-metric">
-                <div className="status-label">RPC Nodes</div>
-                <div className="validator-count">{Math.floor(metrics.consensus.validator_count * 0.6)}</div>
+                <div className="status-label">Network Peers</div>
+                <div className="validator-count">{metrics.network.peer_count}</div>
               </div>
               <div className="validator-metric">
-                <div className="status-label delinquent-info">Delinquent Stake</div>
-                <div className="validator-stake delinquent-info">
-                  {formatNumber(metrics.consensus.voting_power * 0.01)}SOL
+                <div className="status-label">Network Latency</div>
+                <div className="validator-stake">
+                  {metrics.network.network_latency.toFixed(0)}ms
                 </div>
               </div>
             </div>
@@ -313,16 +316,16 @@ export function AuthenticFiredancerDashboard() {
             {/* Circular progress indicator */}
             <div style={{ textAlign: 'center', marginTop: '16px' }}>
               <div className="validator-percentage">
-                {(metrics.consensus.participation_rate * 100).toFixed(2)}%
+                {(metrics.execution.parallel_success_rate * 100).toFixed(1)}%
               </div>
-              <div className="status-secondary">Participation Rate</div>
+              <div className="status-secondary">Parallel Execution Rate</div>
             </div>
           </div>
         </div>
 
-        {/* TPU Waterfall */}
+        {/* Transaction Processing Waterfall */}
         <div className="firedancer-panel waterfall-panel">
-          <div className="panel-header">TPU Waterfall</div>
+          <div className="panel-header">Monad Transaction Processing Waterfall</div>
           <div className="panel-content">
             <div className="waterfall-canvas">
               <TPUWaterfall data={waterfallData} />
@@ -334,18 +337,18 @@ export function AuthenticFiredancerDashboard() {
         <div className="pipeline-panel">
           <div className="pipeline-stages">
             {[
-              { name: 'net', count: 9796 },
-              { name: 'quic', count: 0 },
-              { name: 'bundle', count: 1 },
-              { name: 'verify', count: 0 },
-              { name: 'dedup', count: 0 },
-              { name: 'resolv', count: 0 },
-              { name: 'pack', count: 0 },
-              { name: 'bank', count: 0 },
-              { name: 'poh', count: 61 },
-              { name: 'shred', count: 2 },
-              { name: 'store', count: 0 },
-              { name: 'net', count: 3 }
+              { name: 'rpc', count: metrics ? Math.floor(metrics.waterfall.rpc_received) : 8916 },
+              { name: 'gossip', count: metrics ? Math.floor(metrics.waterfall.gossip_received) : 822 },
+              { name: 'mempool', count: metrics ? Math.floor(metrics.waterfall.mempool_size) : 9738 },
+              { name: 'sig_verify', count: metrics ? Math.floor(metrics.waterfall.signature_failed) : 107 },
+              { name: 'nonce_dedup', count: metrics ? Math.floor(metrics.waterfall.nonce_duplicate) : 203 },
+              { name: 'gas_check', count: metrics ? Math.floor(metrics.waterfall.gas_invalid) : 238 },
+              { name: 'evm_parallel', count: metrics ? Math.floor(metrics.waterfall.evm_parallel_executed) : 3800 },
+              { name: 'evm_sequential', count: metrics ? Math.floor(metrics.waterfall.evm_sequential_fallback) : 700 },
+              { name: 'state_conflict', count: metrics ? Math.floor(metrics.waterfall.state_conflicts) : 450 },
+              { name: 'bft_consensus', count: metrics ? Math.floor(metrics.waterfall.bft_committed) : 13 },
+              { name: 'state_update', count: metrics ? Math.floor(metrics.waterfall.state_updated) : 13 },
+              { name: 'broadcast', count: metrics ? Math.floor(metrics.waterfall.blocks_broadcast) : 13 }
             ].map((stage, index) => (
               <div key={index} className="pipeline-stage">
                 <div className="stage-name">{stage.name}</div>
