@@ -105,7 +105,7 @@ func startMetricsCollection() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	log.Printf("Starting metrics collection...")
+	log.Printf("Starting metrics collection from Monad RPC at %s...", monadClient.ExecutionRPCUrl)
 
 	for {
 		select {

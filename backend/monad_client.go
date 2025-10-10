@@ -35,10 +35,16 @@ func NewMonadClient(monadRPC, bftIPC, execIPC string) *MonadClient {
 func (c *MonadClient) GetConsensusMetrics() (*ConsensusMetrics, error) {
 	// Try RPC first
 	if c.BFTRPCUrl != "" {
-		return c.getConsensusViaRPC()
+		metrics, err := c.getConsensusViaRPC()
+		if err != nil {
+			log.Printf("RPC connection failed: %v", err)
+			// Don't try IPC if RPC fails, return error to trigger fallback to mock
+			return nil, err
+		}
+		return metrics, nil
 	}
 
-	// Fallback to IPC
+	// Fallback to IPC (only if RPC URL not configured)
 	if c.BFTIPCPath != "" {
 		return c.getConsensusViaIPC()
 	}
