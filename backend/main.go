@@ -149,6 +149,7 @@ func handleWebSocket(c *gin.Context) {
 			reader := GetExecutionEventReader()
 			if reader != nil {
 				eventStats := reader.GetStats()
+				_ = eventStats // Use the variable to avoid compilation error
 				metrics.Timestamp = time.Now().Unix()
 				// Add event stats to the response (you could extend MonadMetrics struct)
 			}
