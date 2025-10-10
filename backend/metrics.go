@@ -105,10 +105,14 @@ func startMetricsCollection() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
+	log.Printf("Starting metrics collection...")
+
 	for {
 		select {
 		case <-ticker.C:
-			updateMetricsFromMonad()
+			// Try to get real metrics from Monad, fall back to mock on failure
+			log.Printf("Collecting metrics from Monad...")
+			updateMetricsFromMonad() // Use real Monad data
 		}
 	}
 }
@@ -122,7 +126,7 @@ func updateMetricsFromMonad() {
 	// Try to get real metrics from Monad nodes
 	consensus, err := monadClient.GetConsensusMetrics()
 	if err != nil {
-		log.Printf("Failed to get consensus metrics: %v", err)
+		log.Printf("Failed to get consensus metrics: %v, using mock data", err)
 		// Fall back to mock data
 		updateMetrics()
 		return
@@ -130,7 +134,7 @@ func updateMetricsFromMonad() {
 
 	execution, err := monadClient.GetExecutionMetrics()
 	if err != nil {
-		log.Printf("Failed to get execution metrics: %v", err)
+		log.Printf("Failed to get execution metrics: %v, using mock data", err)
 		// Fall back to mock data
 		updateMetrics()
 		return
@@ -138,7 +142,7 @@ func updateMetricsFromMonad() {
 
 	network, err := monadClient.GetNetworkMetrics()
 	if err != nil {
-		log.Printf("Failed to get network metrics: %v", err)
+		log.Printf("Failed to get network metrics: %v, using defaults", err)
 		// Use defaults
 		network = &NetworkMetrics{
 			PeerCount:      50,
@@ -149,6 +153,8 @@ func updateMetricsFromMonad() {
 			NetworkLatency: 50.0,
 		}
 	}
+
+	log.Printf("Successfully collected metrics from Monad nodes")
 
 	// Update current metrics with real data
 	currentMetrics = MonadMetrics{
