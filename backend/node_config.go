@@ -9,6 +9,7 @@ import (
 func getNodeName() string {
 	// Try common paths for node.toml
 	paths := []string{
+		"/home/monad/monad-bft/config/node.toml",
 		"/root/.monad/config/node.toml",
 		"../monad-bft/config/node.toml",
 		"./config/node.toml",
