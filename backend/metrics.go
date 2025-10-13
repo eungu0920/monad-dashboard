@@ -237,7 +237,7 @@ func updateMetrics() {
 		Consensus: ConsensusMetrics{
 			CurrentHeight:     randomWalk(currentMetrics.Consensus.CurrentHeight, 1000000, 1100000),
 			LastBlockTime:     now.Unix() - int64(rand.Intn(5)),
-			BlockTime:        1.0 + rand.Float64()*0.5,
+			BlockTime:        0.4,  // Monad block time
 			ValidatorCount:   100 + rand.Intn(20),
 			VotingPower:      1000000 + int64(rand.Intn(100000)),
 			ParticipationRate: 0.85 + rand.Float64()*0.1,

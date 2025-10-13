@@ -92,7 +92,7 @@ func (c *MonadClient) getConsensusViaRPC() (*ConsensusMetrics, error) {
 	return &ConsensusMetrics{
 		CurrentHeight:     height,
 		LastBlockTime:     timestamp,
-		BlockTime:         2.0,  // Default Monad block time
+		BlockTime:         0.4,  // Monad block time
 		ValidatorCount:    100,  // Default - would need custom endpoint
 		VotingPower:       1000000, // Default
 		ParticipationRate: 0.9,  // Default
@@ -176,7 +176,7 @@ func (c *MonadClient) getExecutionViaRPC() (*ExecutionMetrics, error) {
 	}
 
 	// Calculate TPS (rough estimation)
-	tps := float64(len(block.Result.Transactions)) / 2.0 // Assuming 2s block time
+	tps := float64(len(block.Result.Transactions)) / 0.4 // Monad 0.4s block time
 
 	gasUsed, _ := parseHexToInt64(block.Result.GasUsed)
 	_ = gasUsed // Use the variable to avoid unused error
