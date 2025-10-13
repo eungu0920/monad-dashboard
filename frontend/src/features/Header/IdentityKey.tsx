@@ -43,8 +43,8 @@ export default function IdentityKey() {
         )}
         <Label
           label="Validator Name"
-          value={`${identityKey?.substring(0, 8)}...`}
-          tooltip="The validators identity public key"
+          value={peer?.info?.name || `${identityKey?.substring(0, 8)}...`}
+          tooltip="The validator's node name"
         />
         {isXNarrowScreen && (
           <>
@@ -90,8 +90,8 @@ function DropdownMenu() {
         <PeerIcon url={peer?.info?.icon_url} size={24} isYou />
         <Label
           label="Validator Name"
-          value={identityKey}
-          tooltip="The validators identity public key"
+          value={peer?.info?.name || identityKey}
+          tooltip="The validator's node name"
         />
       </Flex>
       <StakeValue />

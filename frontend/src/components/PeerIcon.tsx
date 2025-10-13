@@ -1,6 +1,7 @@
 import { useState } from "react";
 import privateIcon from "../assets/private.svg";
 import privateYouIcon from "../assets/privateYou.svg";
+import monadLogo from "../assets/monad_logo.svg";
 import { Tooltip } from "@radix-ui/themes";
 import { useAtom } from "jotai";
 import { getPeerIconHasErrorIcon } from "./peerIconAtom";
@@ -33,7 +34,7 @@ export default function PeerIcon({
       return (
         <Tooltip content="Your current validator">
           <img
-            src={privateYouIcon}
+            src={monadLogo}
             style={{ height: `${size}px`, width: `${size}px` }}
           />
         </Tooltip>
@@ -41,8 +42,8 @@ export default function PeerIcon({
     } else {
       return (
         <img
-          src={privateIcon}
-          alt="private"
+          src={monadLogo}
+          alt="monad"
           style={{ height: `${size}px`, width: `${size}px` }}
         />
       );
@@ -66,8 +67,8 @@ export default function PeerIcon({
       <img
         className={clsx({ [styles.hide]: hasLoaded })}
         style={{ height: `${size}px`, width: `${size}px` }}
-        src={privateIcon}
-        alt="private"
+        src={monadLogo}
+        alt="monad"
       />
     </>
   );
