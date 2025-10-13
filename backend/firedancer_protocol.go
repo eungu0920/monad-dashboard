@@ -187,6 +187,27 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				return
 			}
 
+			// Also send as root_slot and completed_slot for compatibility
+			rootSlotMsg := FiredancerMessage{
+				Topic: "summary",
+				Key:   "root_slot",
+				Value: metrics.Consensus.CurrentHeight,
+			}
+			if err := conn.WriteJSON(rootSlotMsg); err != nil {
+				log.Printf("Error sending root_slot: %v", err)
+				return
+			}
+
+			completedSlotMsg := FiredancerMessage{
+				Topic: "summary",
+				Key:   "completed_slot",
+				Value: metrics.Consensus.CurrentHeight,
+			}
+			if err := conn.WriteJSON(completedSlotMsg); err != nil {
+				log.Printf("Error sending completed_slot: %v", err)
+				return
+			}
+
 			// Send estimated TPS
 			estimatedTpsMsg := FiredancerMessage{
 				Topic: "summary",
@@ -251,17 +272,6 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			}
 			if err := conn.WriteJSON(waterfallMsg); err != nil {
 				log.Printf("Error sending waterfall: %v", err)
-				return
-			}
-
-			// Send root slot
-			rootSlotMsg := FiredancerMessage{
-				Topic: "summary",
-				Key:   "root_slot",
-				Value: metrics.Consensus.CurrentHeight,
-			}
-			if err := conn.WriteJSON(rootSlotMsg); err != nil {
-				log.Printf("Error sending root_slot: %v", err)
 				return
 			}
 
