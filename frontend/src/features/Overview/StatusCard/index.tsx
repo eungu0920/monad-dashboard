@@ -40,7 +40,7 @@ function CurrentSlotText() {
   return (
     <Box>
       <CardStat
-        label="Slot"
+        label="Block"
         value={currentSlot?.toString() ?? ""}
         valueColor={headerColor}
         large

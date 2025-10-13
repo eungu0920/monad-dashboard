@@ -267,3 +267,29 @@ func parseHexToInt64(s string) (int64, error) {
 	_, err := fmt.Sscanf(s, "0x%x", &result)
 	return result, err
 }
+
+// Get current epoch information
+func (c *MonadClient) GetCurrentEpoch() (int64, error) {
+	// Monad doesn't have epochs in the same way as Solana
+	// We'll calculate a pseudo-epoch based on block height
+	// For example, every 100,000 blocks = 1 epoch
+	blockNumResp, err := c.rpcCall(c.ExecutionRPCUrl, "eth_blockNumber", []interface{}{})
+	if err != nil {
+		return 0, fmt.Errorf("failed to get block number: %w", err)
+	}
+
+	var blockNumResult struct {
+		Result string `json:"result"`
+	}
+
+	if err := json.Unmarshal(blockNumResp, &blockNumResult); err != nil {
+		return 0, fmt.Errorf("failed to decode block number: %w", err)
+	}
+
+	blockHeight, _ := parseHexToInt64(blockNumResult.Result)
+
+	// Calculate epoch: 1 epoch = 100,000 blocks
+	epoch := blockHeight / 100000
+
+	return epoch, nil
+}

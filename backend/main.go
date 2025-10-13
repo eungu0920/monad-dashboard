@@ -151,6 +151,12 @@ func handleWebSocket(c *gin.Context) {
 		return
 	}
 
+	// Send epoch information
+	if err := sendEpochMessage(conn); err != nil {
+		log.Printf("Error sending epoch message: %v", err)
+		return
+	}
+
 	// Start goroutine to handle incoming client messages
 	done := make(chan struct{})
 	go func() {

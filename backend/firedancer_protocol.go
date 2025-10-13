@@ -117,6 +117,43 @@ func sendPeersMessage(conn *websocket.Conn) error {
 	return conn.WriteJSON(peersMsg)
 }
 
+// Send epoch information
+func sendEpochMessage(conn *websocket.Conn) error {
+	// Get current epoch from Monad
+	epoch, err := monadClient.GetCurrentEpoch()
+	if err != nil {
+		log.Printf("Failed to get current epoch: %v, using default", err)
+		epoch = 0
+	}
+
+	// Get current block height
+	metrics := getCurrentMetrics()
+	currentBlock := metrics.Consensus.CurrentHeight
+
+	// Calculate epoch boundaries (100,000 blocks per epoch)
+	epochSize := int64(100000)
+	startSlot := epoch * epochSize
+	endSlot := (epoch + 1) * epochSize
+
+	epochMsg := FiredancerMessage{
+		Topic: "epoch",
+		Key:   "new",
+		Value: map[string]interface{}{
+			"epoch":                    epoch,
+			"start_time_nanos":         nil,
+			"end_time_nanos":           nil,
+			"start_slot":               startSlot,
+			"end_slot":                 endSlot,
+			"excluded_stake_lamports":  0,
+			"staked_pubkeys":           []string{},
+			"staked_lamports":          []int64{},
+			"leader_slots":             []int{}, // Empty for Monad
+		},
+	}
+
+	return conn.WriteJSON(epochMsg)
+}
+
 // Send periodic updates
 func sendFiredancerUpdates(conn *websocket.Conn) {
 	ticker := time.NewTicker(1 * time.Second)
