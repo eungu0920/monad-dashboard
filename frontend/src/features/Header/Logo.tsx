@@ -11,7 +11,7 @@ export default function Logo() {
   return (
     <Reset>
       <Link to="/">
-        <Flex align="center" gap="3">
+        <Flex align="center" gap="2">
           <img
             className={styles.logo}
             src={monadLogo}

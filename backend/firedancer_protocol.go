@@ -83,6 +83,9 @@ func sendInitialSummaryMessages(conn *websocket.Conn) error {
 
 // Send peers data to satisfy startup screen requirements
 func sendPeersMessage(conn *websocket.Conn) error {
+	// Get node name from config
+	nodeName := getNodeName()
+
 	// Send a simple peers update with at least one peer
 	// This will make hasPeers === true in the frontend
 	peersMsg := FiredancerMessage{
@@ -91,7 +94,7 @@ func sendPeersMessage(conn *websocket.Conn) error {
 		Value: map[string]interface{}{
 			"add": []map[string]interface{}{
 				{
-					"identity_pubkey": "MonadPeer1111111111111111111111111111111",
+					"identity_pubkey": "MonadValidator1111111111111111111111111",
 					"gossip": map[string]interface{}{
 						"wallclock":     time.Now().Unix(),
 						"shred_version": 1,
@@ -100,7 +103,12 @@ func sendPeersMessage(conn *websocket.Conn) error {
 						"sockets":       map[string]string{},
 					},
 					"vote": []map[string]interface{}{},
-					"info": nil,
+					"info": map[string]interface{}{
+						"name":     nodeName,
+						"details":  nil,
+						"website":  nil,
+						"icon_url": nil,
+					},
 				},
 			},
 		},

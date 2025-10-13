@@ -26,14 +26,11 @@ export default function IdentityKey() {
   const isNarrowScreen = useMedia("(min-width: 900px)");
 
   useEffect(() => {
-    let title = "Monad";
     if (peer?.info?.name) {
-      title += ` | ${peer.info.name}`;
-    } else if (identityKey) {
-      title += ` | ${identityKey}`;
+      document.title = `Monad | ${peer.info.name}`;
+    } else {
+      document.title = "Monad";
     }
-
-    document.title = title;
   }, [identityKey, peer]);
 
   return (
