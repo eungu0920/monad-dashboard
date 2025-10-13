@@ -1,6 +1,4 @@
 import { useState } from "react";
-import privateIcon from "../assets/private.svg";
-import privateYouIcon from "../assets/privateYou.svg";
 import monadLogo from "../assets/monad_logo.svg";
 import { Tooltip } from "@radix-ui/themes";
 import { useAtom } from "jotai";

@@ -126,12 +126,8 @@ func sendEpochMessage(conn *websocket.Conn) error {
 		epoch = 0
 	}
 
-	// Get current block height
-	metrics := getCurrentMetrics()
-	currentBlock := metrics.Consensus.CurrentHeight
-
-	// Calculate epoch boundaries (100,000 blocks per epoch)
-	epochSize := int64(100000)
+	// Calculate epoch boundaries (50,000 blocks per epoch)
+	epochSize := int64(50000)
 	startSlot := epoch * epochSize
 	endSlot := (epoch + 1) * epochSize
 
