@@ -152,7 +152,8 @@ func sendEpochMessage(conn *websocket.Conn) error {
 
 // Send periodic updates
 func sendFiredancerUpdates(conn *websocket.Conn) {
-	ticker := time.NewTicker(1 * time.Second)
+	// Update every 200ms to catch all blocks (Monad block time is 400ms)
+	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
 
 	pingID := 0
