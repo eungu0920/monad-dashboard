@@ -40,7 +40,7 @@ func main() {
 		}
 
 		// Try to serve static files first
-		if c.Request.URL.Path != "/" && c.Request.URL.Path != "/ws" &&
+		if c.Request.URL.Path != "/" && c.Request.URL.Path != "/websocket" &&
 		   !strings.HasPrefix(c.Request.URL.Path, "/api") {
 			file, err := static.ReadFile("frontend/dist" + c.Request.URL.Path)
 			if err == nil {
@@ -86,8 +86,8 @@ func main() {
 		api.GET("/event-rings", handleEventRingsStatus)
 	}
 
-	// WebSocket endpoint
-	r.GET("/ws", handleWebSocket)
+	// WebSocket endpoint (Firedancer uses /websocket)
+	r.GET("/websocket", handleWebSocket)
 
 	// Initialize event rings connection
 	if err := InitializeEventRings(); err != nil {
@@ -136,28 +136,36 @@ func handleWebSocket(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	// Send real-time metrics updates
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+	log.Printf("WebSocket client connected from %s", c.Request.RemoteAddr)
 
-	for {
-		select {
-		case <-ticker.C:
-			metrics := getCurrentMetrics()
+	// Send initial Firedancer protocol messages
+	if err := sendInitialSummaryMessages(conn); err != nil {
+		log.Printf("Error sending initial messages: %v", err)
+		return
+	}
 
-			// Add event rings status to metrics
-			reader := GetExecutionEventReader()
-			if reader != nil {
-				eventStats := reader.GetStats()
-				_ = eventStats // Use the variable to avoid compilation error
-				metrics.Timestamp = time.Now().Unix()
-				// Add event stats to the response (you could extend MonadMetrics struct)
-			}
-
-			if err := conn.WriteJSON(metrics); err != nil {
-				log.Printf("WebSocket write error: %v", err)
+	// Start goroutine to handle incoming client messages
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Printf("WebSocket read error: %v", err)
+				}
 				return
 			}
+			if err := handleFiredancerClientMessage(conn, message); err != nil {
+				log.Printf("Error handling client message: %v", err)
+			}
 		}
-	}
+	}()
+
+	// Send periodic updates using Firedancer protocol
+	go sendFiredancerUpdates(conn)
+
+	// Wait for connection to close
+	<-done
+	log.Printf("WebSocket client disconnected")
 }
