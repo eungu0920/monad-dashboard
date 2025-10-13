@@ -124,7 +124,7 @@ export default function Body() {
         <img
           src={monadLogo}
           alt="Monad"
-          height="50px"
+          height="40px"
           style={{ marginBottom: "28px" }}
         />
         {steps.map(({ step, rightChildren, bottomChildren, optional }, i) => {

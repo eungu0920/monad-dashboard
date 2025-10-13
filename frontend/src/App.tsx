@@ -4,14 +4,11 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import "./app.css";
 import { routeTree } from "./routeTree.gen";
 import { ConnectionProvider } from "./api/ws/ConnectionProvider";
-import { getDefaultStore, useSetAtom } from "jotai";
-import { clientAtom, containerElAtom } from "./atoms";
+import { useSetAtom } from "jotai";
+import { containerElAtom } from "./atoms";
 import { useCallback } from "react";
 import * as colors from "./colors";
 import { kebabCase } from "lodash";
-import FiredancerLogo from "./assets/firedancer_logo.svg";
-import FrankendancerLogo from "./assets/frankendancer_logo.svg";
-import { ClientEnum } from "./api/entities";
 
 const router = createRouter({ routeTree });
 
@@ -22,16 +19,8 @@ declare module "@tanstack/react-router" {
   }
 }
 
-// set up favicon and title based on client
-const store = getDefaultStore();
-const client = store.get(clientAtom);
-if (client === ClientEnum.Firedancer) {
-  document.getElementById("favicon")?.setAttribute("href", FiredancerLogo);
-  document.title = "Firedancer";
-} else {
-  document.getElementById("favicon")?.setAttribute("href", FrankendancerLogo);
-  document.title = "Frankendancer";
-}
+// Set up title for Monad
+document.title = "Monad";
 
 export default function App() {
   const setContainerEl = useSetAtom(containerElAtom);

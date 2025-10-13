@@ -16,7 +16,7 @@ export default function Logo() {
             className={styles.logo}
             src={monadLogo}
             alt="Monad"
-            style={{ height: "32px" }}
+            style={{ height: "26px" }}
           />
           {isWideScreen && (
             <Text size="5" weight="bold" style={{ color: "white" }}>

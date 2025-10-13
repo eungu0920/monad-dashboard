@@ -26,7 +26,7 @@ export default function IdentityKey() {
   const isNarrowScreen = useMedia("(min-width: 900px)");
 
   useEffect(() => {
-    let title = document.title;
+    let title = "Monad";
     if (peer?.info?.name) {
       title += ` | ${peer.info.name}`;
     } else if (identityKey) {
