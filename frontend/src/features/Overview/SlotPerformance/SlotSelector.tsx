@@ -16,7 +16,7 @@ import styles from "./slotSelector.module.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import NavigatePrev from "./NavigatePrev";
 import NavigateNext from "./NavigateNext";
-import skippedIcon from "../../../assets/Skipped.svg";
+import skippedIcon from "../../../assets/skipped.svg";
 import { useSlotSearchParam } from "../useSearchParams";
 
 function getAllLeaderSlots(leaderSlots?: number[]) {
