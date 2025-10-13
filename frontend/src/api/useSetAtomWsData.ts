@@ -40,6 +40,7 @@ import {
   deleteSlotStatusBoundsAtom,
   deleteSlotResponseBoundsAtom,
   skipRateAtom,
+  currentSlotAtom,
 } from "../atoms";
 import type {
   EstimatedSlotDuration,
@@ -127,6 +128,7 @@ export function useSetAtomWsData() {
   const setVoteState = useSetAtom(voteStateAtom);
   const setVoteDistance = useSetAtom(voteDistanceAtom);
   const setSkipRate = useSetAtom(skipRateAtom);
+  const setCurrentSlot = useSetAtom(currentSlotAtom);
 
   const setSkippedSlots = useSetAtom(skippedSlotsAtom);
   const setSlotResponse = useSetAtom(setSlotResponseAtom);
@@ -246,10 +248,16 @@ export function useSetAtomWsData() {
             setSkipRate(value);
             break;
           }
-          case "root_slot":
-          case "optimistically_confirmed_slot":
-          case "completed_slot":
           case "estimated_slot":
+          case "root_slot":
+          case "completed_slot": {
+            // Update current block number from Monad
+            if (typeof value === "number") {
+              setCurrentSlot(value);
+            }
+            break;
+          }
+          case "optimistically_confirmed_slot":
           case "ping":
             break;
         }
