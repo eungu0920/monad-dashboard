@@ -145,6 +145,12 @@ func handleWebSocket(c *gin.Context) {
 		return
 	}
 
+	// Send peers message to remove startup screen
+	if err := sendPeersMessage(conn); err != nil {
+		log.Printf("Error sending peers message: %v", err)
+		return
+	}
+
 	// Start goroutine to handle incoming client messages
 	done := make(chan struct{})
 	go func() {

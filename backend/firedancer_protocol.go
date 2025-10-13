@@ -81,6 +81,34 @@ func sendInitialSummaryMessages(conn *websocket.Conn) error {
 	return nil
 }
 
+// Send peers data to satisfy startup screen requirements
+func sendPeersMessage(conn *websocket.Conn) error {
+	// Send a simple peers update with at least one peer
+	// This will make hasPeers === true in the frontend
+	peersMsg := FiredancerMessage{
+		Topic: "peers",
+		Key:   "update",
+		Value: map[string]interface{}{
+			"add": []map[string]interface{}{
+				{
+					"identity_pubkey": "MonadPeer1111111111111111111111111111111",
+					"gossip": map[string]interface{}{
+						"wallclock":     time.Now().Unix(),
+						"shred_version": 1,
+						"version":       "1.0.0",
+						"feature_set":   nil,
+						"sockets":       map[string]string{},
+					},
+					"vote": []map[string]interface{}{},
+					"info": nil,
+				},
+			},
+		},
+	}
+
+	return conn.WriteJSON(peersMsg)
+}
+
 // Send periodic updates
 func sendFiredancerUpdates(conn *websocket.Conn) {
 	ticker := time.NewTicker(1 * time.Second)
