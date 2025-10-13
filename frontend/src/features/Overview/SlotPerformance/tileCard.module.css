@@ -1,0 +1,28 @@
+.header {
+  color: var(--dropdown-button-text-color);
+}
+
+.subHeader {
+  color: var(--tile-sub-header-color);
+  font-size: 12px;
+  line-height: 12px;
+}
+
+.tile-container {
+  display: flex;
+  flex-wrap: wrap;
+  flex-flow: wrap-reverse;
+  gap: 2px;
+  flex-grow: 1;
+
+  .tile {
+    width: 6px;
+    height: 6px;
+    border-radius: 1px;
+    background: color-mix(
+      in oklab,
+      var(--tile-background-red-color) var(--busy),
+      var(--tile-background-blue-color)
+    );
+  }
+}

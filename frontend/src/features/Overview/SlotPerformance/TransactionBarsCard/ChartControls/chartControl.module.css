@@ -1,0 +1,81 @@
+.slider {
+  width: 190px;
+  flex-grow: 1;
+  position: relative;
+
+  :global(.rt-SliderRoot) {
+    &::before {
+      position: absolute;
+      content: "";
+      /* Extra height to slightly expand above/below slider track */
+      height: calc(100% + 4px);
+      top: -2px;
+      /* moved 0.5px to the left since the width of the bar is 1px */
+      left: calc(var(--slot-start-pct) - 0.5px);
+      width: 1px;
+      background: var(--toggle-item-text-color);
+      /* Puts the bar above the slider track */
+      z-index: 1;
+    }
+
+    &::after {
+      position: absolute;
+      content: "0ms";
+      font-size: 10px;
+      height: 12px;
+      bottom: -16px;
+      /* Moved the same amount as the ::before bar */
+      left: calc(var(--slot-start-pct) - 0.5px);
+      transform: translateX(-50%);
+      color: #ffffff;
+      /* Same as the ::before bar */
+      z-index: 1;
+    }
+
+    span:has(> :global(.rt-SliderThumb)) {
+      /* Keep the slider thumbs above the 0ms marker */
+      z-index: 2;
+    }
+
+    span:has(> [aria-label="Minimum"])::after {
+      content: var(--min-value-label, "");
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%, 4px);
+      font-size: 10px;
+      white-space: nowrap;
+      color: rgb(186, 167, 255);
+      background: var(--toggle-item-background-color);
+      padding: 0px 2px;
+      border-radius: 4px;
+    }
+
+    span:has(> [aria-label="Maximum"])::after {
+      content: var(--max-value-label, "");
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%, 4px);
+      font-size: 10px;
+      white-space: nowrap;
+      color: rgb(186, 167, 255);
+      background: var(--toggle-item-background-color);
+      padding: 0px 2px;
+      border-radius: 4px;
+    }
+  }
+}
+
+.arrival-label {
+  color: #ffffff;
+}
+
+.slider-label {
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.minimize-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}

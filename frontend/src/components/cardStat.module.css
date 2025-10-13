@@ -1,0 +1,15 @@
+.label {
+  color: var(--regular-text-color);
+  font-size: 12px;
+  line-height: normal;
+  text-wrap: nowrap;
+}
+
+.value {
+  line-height: normal;
+}
+
+.append-value {
+  color: var(--regular-text-color);
+  line-height: normal;
+}

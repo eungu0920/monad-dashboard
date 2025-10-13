@@ -1,0 +1,51 @@
+.tooltip {
+  padding: 4px;
+  border-radius: 5px;
+  background: #121212;
+  display: grid;
+  grid: auto-flow / auto auto;
+  column-gap: 8px;
+
+  span {
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
+    text-align: right;
+  }
+
+  .active-banks {
+    color: rgba(117, 77, 18, 1);
+  }
+
+  .compute-units {
+    color: var(--compute-units-color);
+  }
+
+  .elapsed-time {
+    color: var(--elapsed-time-color);
+  }
+
+  .prio-fee {
+    color: var(--fees-color);
+  }
+
+  .tips {
+    color: var(--tips-color);
+  }
+
+  .label {
+    font-weight: 600;
+    text-align: left;
+  }
+}
+
+.chart {
+  flex-grow: 1;
+  height: 25vw;
+  min-height: 250px;
+  max-height: 600px;
+  position: relative;
+  margin-left: -8px;
+  margin-right: -8px;
+}
