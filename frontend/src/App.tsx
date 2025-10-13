@@ -1,8 +1,21 @@
 import React from 'react';
-import { AuthenticFiredancerDashboard } from './components/AuthenticFiredancerDashboard';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { FiredancerLayout } from './components/FiredancerLayout';
+import { Overview, LeaderSchedule, Gossip } from './pages';
+import './index.css';
 
 function App() {
-  return <AuthenticFiredancerDashboard />;
+  return (
+    <BrowserRouter>
+      <FiredancerLayout>
+        <Routes>
+          <Route path="/" element={<Overview />} />
+          <Route path="/leader-schedule" element={<LeaderSchedule />} />
+          <Route path="/gossip" element={<Gossip />} />
+        </Routes>
+      </FiredancerLayout>
+    </BrowserRouter>
+  );
 }
 
 export default App;
