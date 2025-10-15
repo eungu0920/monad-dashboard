@@ -313,9 +313,23 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				return
 			}
 
+			// Send TPS history for the chart
+			// Format: [total, vote, nonvote_success, nonvote_failed]
+			tpsHistoryMsg := FiredancerMessage{
+				Topic: "summary",
+				Key:   "tps_history",
+				Value: [][]float64{
+					{oneSecondTPS, 0, avgTPS, instantTPS},
+				},
+			}
+			if err := conn.WriteJSON(tpsHistoryMsg); err != nil {
+				log.Printf("Error sending tps_history: %v", err)
+				return
+			}
+
 			// Debug: log message count
-			log.Printf("Sent Firedancer updates: ping=%d, slot=%d, tps=%.2f",
-				pingID, metrics.Consensus.CurrentHeight, metrics.Execution.TPS)
+			log.Printf("Sent Firedancer updates: ping=%d, slot=%d, 1s=%.2f, avg=%.2f, instant=%.2f",
+				pingID, metrics.Consensus.CurrentHeight, oneSecondTPS, avgTPS, instantTPS)
 		}
 	}
 }
