@@ -25,8 +25,12 @@ type MonadSubscriber struct {
 	isConnected    bool
 
 	// TPS calculation - track recent blocks
-	recentBlocks   []BlockTxInfo
+	recentBlocks    []BlockTxInfo
 	maxRecentBlocks int
+
+	// TPS history for charting
+	tpsHistory      [][4]float64 // [total, vote, avg, instant]
+	maxHistorySize  int
 
 	ctx            context.Context
 	cancel         context.CancelFunc
@@ -56,6 +60,8 @@ func NewMonadSubscriber(wsURL string) *MonadSubscriber {
 		errorChan:       make(chan error, 10),
 		recentBlocks:    make([]BlockTxInfo, 0, 10),
 		maxRecentBlocks: 10, // Track last 10 blocks (~4 seconds of data)
+		tpsHistory:      make([][4]float64, 0, 100),
+		maxHistorySize:  100, // Keep 100 data points for chart
 		ctx:             ctx,
 		cancel:          cancel,
 	}
@@ -298,6 +304,31 @@ func (s *MonadSubscriber) getInstantTPS() float64 {
 
 	lastBlock := s.recentBlocks[len(s.recentBlocks)-1]
 	return float64(lastBlock.Transactions) / 0.4 // Per 0.4s block time
+}
+
+// addTPSToHistory adds current TPS metrics to history for charting
+func (s *MonadSubscriber) addTPSToHistory(oneSecondTPS, avgTPS, instantTPS float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Add new data point: [total, vote, avg, instant]
+	s.tpsHistory = append(s.tpsHistory, [4]float64{oneSecondTPS, 0, avgTPS, instantTPS})
+
+	// Keep only the most recent points
+	if len(s.tpsHistory) > s.maxHistorySize {
+		s.tpsHistory = s.tpsHistory[1:]
+	}
+}
+
+// getTPSHistory returns the full TPS history for charting
+func (s *MonadSubscriber) getTPSHistory() [][4]float64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Make a copy to avoid race conditions
+	historyCopy := make([][4]float64, len(s.tpsHistory))
+	copy(historyCopy, s.tpsHistory)
+	return historyCopy
 }
 
 // parseBlockHeader converts JSON to BlockHeader

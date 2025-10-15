@@ -225,6 +225,9 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				oneSecondTPS = monadSubscriber.calculateOneSecondTPS()
 				avgTPS = monadSubscriber.calculateAverageTPS()
 				instantTPS = monadSubscriber.getInstantTPS()
+
+				// Add to history for charting
+				monadSubscriber.addTPSToHistory(oneSecondTPS, avgTPS, instantTPS)
 			} else {
 				// Fallback to current metrics
 				oneSecondTPS = metrics.Execution.TPS
@@ -314,13 +317,26 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			}
 
 			// Send TPS history for the chart
-			// Format: [total, vote, nonvote_success, nonvote_failed]
+			// Get accumulated history from subscriber
+			var tpsHistoryData [][]float64
+			if monadSubscriber != nil && monadSubscriber.IsConnected() {
+				history := monadSubscriber.getTPSHistory()
+				// Convert [][4]float64 to [][]float64
+				tpsHistoryData = make([][]float64, len(history))
+				for i, h := range history {
+					tpsHistoryData[i] = []float64{h[0], h[1], h[2], h[3]}
+				}
+			} else {
+				// Fallback: send single point
+				tpsHistoryData = [][]float64{
+					{oneSecondTPS, 0, avgTPS, instantTPS},
+				}
+			}
+
 			tpsHistoryMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "tps_history",
-				Value: [][]float64{
-					{oneSecondTPS, 0, avgTPS, instantTPS},
-				},
+				Value: tpsHistoryData,
 			}
 			if err := conn.WriteJSON(tpsHistoryMsg); err != nil {
 				log.Printf("Error sending tps_history: %v", err)
@@ -328,8 +344,8 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			}
 
 			// Debug: log message count
-			log.Printf("Sent Firedancer updates: ping=%d, slot=%d, 1s=%.2f, avg=%.2f, instant=%.2f",
-				pingID, metrics.Consensus.CurrentHeight, oneSecondTPS, avgTPS, instantTPS)
+			log.Printf("Sent Firedancer updates: ping=%d, slot=%d, 1s=%.2f, avg=%.2f, instant=%.2f, history=%d",
+				pingID, metrics.Consensus.CurrentHeight, oneSecondTPS, avgTPS, instantTPS, len(tpsHistoryData))
 		}
 	}
 }
