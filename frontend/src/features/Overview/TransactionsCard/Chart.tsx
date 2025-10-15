@@ -5,9 +5,7 @@ import { useAtomValue } from "jotai";
 import { tpsDataAtom } from "./atoms";
 import {
   regularTextColor,
-  transactionFailedPathColor,
   transactionNonVotePathColor,
-  transactionVotePathColor,
 } from "../../../colors";
 
 const getPath = (points: { x: number; y: number }[], height: number) => {
@@ -26,7 +24,8 @@ export default function Chart() {
   const tpsData = useAtomValue(tpsDataAtom);
   const sizeRefs = useRef<{ height: number; width: number }>();
 
-  const maxTotalTps = Math.max(...tpsData.map((d) => d?.total ?? 0));
+  // Use Avg TPS (nonvote_success) for max scale instead of total
+  const maxTotalTps = Math.max(...tpsData.map((d) => d?.nonvote_success ?? 0));
 
   const scaledPaths = useMemo(() => {
     if (!sizeRefs.current) return;
@@ -41,11 +40,10 @@ export default function Chart() {
       .map((d, i) => {
         if (d === undefined) return;
 
+        // Only show Avg TPS (nonvote_success)
         return {
           x: i * xRatio,
-          voteY: d.vote * yRatio,
-          nonvoteFailedY: (d.nonvote_failed + d.vote) * yRatio,
-          nonvoteY: (d.nonvote_success + d.nonvote_failed + d.vote) * yRatio,
+          avgY: d.nonvote_success * yRatio, // Only Avg TPS
         };
       })
       .filter(isDefined);
@@ -53,16 +51,8 @@ export default function Chart() {
     const maxTotalY = height - maxTotalTps * yRatio;
 
     return {
-      votePath: getPath(
-        points.map((p) => ({ x: p.x, y: p.voteY })),
-        height,
-      ),
-      failedPath: getPath(
-        points.map((p) => ({ x: p.x, y: p.nonvoteFailedY })),
-        height,
-      ),
-      nonvotePath: getPath(
-        points.map((p) => ({ x: p.x, y: p.nonvoteY })),
+      avgPath: getPath(
+        points.map((p) => ({ x: p.x, y: p.avgY })),
         height,
       ),
       totalTpsY: isNaN(maxTotalY) ? undefined : maxTotalY,
@@ -86,18 +76,8 @@ export default function Chart() {
                 <path
                   fillRule="evenodd"
                   clipRule="evenodd"
-                  d={scaledPaths.nonvotePath}
+                  d={scaledPaths.avgPath}
                   fill={transactionNonVotePathColor}
-                />
-                <path
-                  d={scaledPaths.failedPath}
-                  fill={transactionFailedPathColor}
-                />
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  fill={transactionVotePathColor}
-                  d={scaledPaths.votePath}
                 />
 
                 {scaledPaths.totalTpsY && (
