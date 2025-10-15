@@ -254,7 +254,12 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				return
 			}
 
-			// Send live txn waterfall
+			// Send live txn waterfall (Monad-specific)
+			// Generate waterfall data from real-time subscriber metrics
+			waterfallData := GenerateWaterfallFromSubscriber()
+			waterfallIn := waterfallData["in"].(map[string]interface{})
+			waterfallOut := waterfallData["out"].(map[string]interface{})
+
 			waterfallMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "live_txn_waterfall",
@@ -262,40 +267,50 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 					"next_leader_slot": nil,
 					"waterfall": map[string]interface{}{
 						"in": map[string]interface{}{
+							// Monad ingress: RPC + P2P
+							"quic":           waterfallIn["rpc"],      // RPC transactions
+							"udp":            waterfallIn["p2p"],      // P2P gossip transactions
+							"gossip":         waterfallIn["gossip"],   // Same as P2P
 							"pack_cranked":   0,
 							"pack_retained":  0,
 							"resolv_retained": 0,
-							"quic":           int(metrics.Waterfall.RPCReceived),
-							"udp":            int(metrics.Waterfall.GossipReceived),
-							"gossip":         int(metrics.Waterfall.GossipReceived),
 							"block_engine":   0,
 						},
 						"out": map[string]interface{}{
+							// Network drops
 							"net_overrun":           0,
 							"quic_overrun":          0,
 							"quic_frag_drop":        0,
 							"quic_abandoned":        0,
 							"tpu_quic_invalid":      0,
 							"tpu_udp_invalid":       0,
+
+							// Verification stage (Monad-specific)
 							"verify_overrun":        0,
 							"verify_parse":          0,
-							"verify_failed":         int(metrics.Waterfall.SignatureFailed),
-							"verify_duplicate":      int(metrics.Waterfall.NonceDuplicate),
-							"dedup_duplicate":       int(metrics.Waterfall.NonceDuplicate),
-							"resolv_lut_failed":     0,
-							"resolv_expired":        0,
+							"verify_failed":         waterfallOut["verify_failed"],     // Signature verification
+							"verify_duplicate":      waterfallOut["nonce_failed"],      // Nonce check
+							"dedup_duplicate":       waterfallOut["nonce_failed"],      // Same as nonce
+
+							// Pool management (Monad-specific)
+							"resolv_lut_failed":     waterfallOut["balance_failed"],    // Balance check
+							"resolv_expired":        waterfallOut["pool_fee_dropped"],  // Fee too low
 							"resolv_no_ledger":      0,
 							"resolv_ancient":        0,
 							"resolv_retained":       0,
-							"pack_invalid":          int(metrics.Waterfall.GasInvalid),
+
+							// Block packing
+							"pack_invalid":          0,
 							"pack_invalid_bundle":   0,
 							"pack_retained":         0,
 							"pack_leader_slow":      0,
-							"pack_wait_full":        0,
+							"pack_wait_full":        waterfallOut["pool_full"],
 							"pack_expired":          0,
-							"bank_invalid":          0,
-							"block_success":         int(metrics.Waterfall.EVMParallelExecuted),
-							"block_fail":            int(metrics.Waterfall.EVMSequentialFallback),
+
+							// Execution (Monad EVM)
+							"bank_invalid":          waterfallOut["exec_failed"],
+							"block_success":         waterfallOut["exec_parallel"],       // Parallel EVM success
+							"block_fail":            waterfallOut["exec_sequential"],     // Sequential fallback
 						},
 					},
 				},
