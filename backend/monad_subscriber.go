@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -146,6 +147,10 @@ func (s *MonadSubscriber) handleSubscriptionMessage(msg map[string]interface{}) 
 		return
 	}
 
+	// Fetch full block details to get transaction count
+	// newHeads subscription doesn't include tx count, so we need to fetch it
+	go s.enrichBlockWithTransactions(header)
+
 	// Update latest block
 	s.mu.Lock()
 	s.latestBlock = header
@@ -160,6 +165,39 @@ func (s *MonadSubscriber) handleSubscriptionMessage(msg map[string]interface{}) 
 
 	log.Printf("Received new block: height=%d, hash=%s, txs=%d",
 		header.Number, header.Hash[:10], header.Transactions)
+}
+
+// enrichBlockWithTransactions fetches full block details to get transaction count
+func (s *MonadSubscriber) enrichBlockWithTransactions(header *BlockHeader) {
+	// Use monadClient to fetch full block with transaction count
+	blockResp, err := monadClient.rpcCall(monadClient.ExecutionRPCUrl, "eth_getBlockByNumber",
+		[]interface{}{fmt.Sprintf("0x%x", header.Number), false})
+	if err != nil {
+		log.Printf("Failed to fetch block details for enrichment: %v", err)
+		return
+	}
+
+	var block struct {
+		Result struct {
+			Transactions []string `json:"transactions"`
+		} `json:"result"`
+	}
+
+	if err := json.Unmarshal(blockResp, &block); err != nil {
+		log.Printf("Failed to decode block for enrichment: %v", err)
+		return
+	}
+
+	// Update transaction count
+	header.Transactions = len(block.Result.Transactions)
+
+	// Update metrics immediately with enriched data
+	updateMetricsFromBlock(header)
+
+	// Also update epoch information based on block number
+	epoch := header.Number / 50000 // 50,000 blocks per epoch
+	log.Printf("Block %d: Epoch %d, TPS: %.2f (txs=%d)",
+		header.Number, epoch, float64(header.Transactions)/0.4, header.Transactions)
 }
 
 // parseBlockHeader converts JSON to BlockHeader
