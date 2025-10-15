@@ -100,7 +100,7 @@ func main() {
 	}
 
 	// Try to initialize real-time WebSocket subscription
-	wsURL := "ws://127.0.0.1:8080"
+	wsURL := "ws://127.0.0.1:8081"
 	log.Printf("Attempting to connect to Monad WebSocket at %s...", wsURL)
 	if err := InitializeSubscriber(wsURL); err != nil {
 		log.Printf("Failed to initialize WebSocket subscriber: %v", err)

@@ -161,8 +161,18 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 	for {
 		select {
 		case <-ticker.C:
-			// Get current metrics
+			// Fetch fresh metrics directly from Monad on each update
+			// This ensures we don't miss any blocks
+			consensus, err := monadClient.GetConsensusMetrics()
+			if err != nil {
+				log.Printf("Error fetching consensus metrics: %v", err)
+				continue
+			}
+
+			// Get cached metrics for other data
 			metrics := getCurrentMetrics()
+			// Update with fresh consensus data
+			metrics.Consensus = *consensus
 
 			// Send ping
 			pingID++
