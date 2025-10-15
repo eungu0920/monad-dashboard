@@ -217,7 +217,6 @@ func GenerateWaterfallFromSubscriber() map[string]interface{} {
 
 	// Stage 4: Pack (all promoted txs selected)
 	selected := promoted
-	backendLookups := selected * 2 // 2 lookups per tx
 
 	// Stage 5: Exec (85% parallel success based on metrics)
 	parallelSuccess := selected * 85 / 100
@@ -226,13 +225,10 @@ func GenerateWaterfallFromSubscriber() map[string]interface{} {
 	stateWrites := selected * 1  // ~1 write per tx
 
 	// Stage 6: State
-	accountsUpdated := selected
-	storageUpdated := stateWrites
 	logsEmitted := selected / 3 // ~33% of txs emit logs
 
 	// Stage 7: Block
 	proposed := int64(1)  // One block
-	qcFormed := int64(1)
 	finalized := int64(1)
 
 	return map[string]interface{}{
