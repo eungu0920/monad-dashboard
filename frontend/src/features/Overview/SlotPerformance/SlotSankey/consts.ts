@@ -1,48 +1,62 @@
 export const enum SlotNode {
+  // Monad: Not used but kept for compatibility
   IncPackCranked = "Crank:inc",
   IncPackRetained = "Buffered:inc",
   IncResolvRetained = "Unresolved:inc",
-  IncQuic = "QUIC",
-  IncUdp = "UDP",
-  IncGossip = "Gossip",
-  IncBlockEngine = "Jito",
+
+  // Monad: Network ingress
+  IncQuic = "RPC",           // Changed: QUIC → RPC
+  IncUdp = "P2P",            // Changed: UDP → P2P
+  IncGossip = "P2P",         // Changed: Gossip → P2P (same as UDP)
+  IncBlockEngine = "Relayer", // Changed: Jito → Relayer
 
   SlotStart = "Received",
   SlotEnd = "Packed",
   End = "End",
 
+  // Monad: Pipeline stages
   Networking = "networking:tile",
-  QUIC = "QUIC:tile",
+  QUIC = "RPC:tile",         // Changed: QUIC → RPC
   Verification = "verify:tile",
-  Dedup = "dedup:tile",
-  Resolv = "resolv:tile",
+  Dedup = "pool:tile",       // Changed: dedup → pool
+  Resolv = "validate:tile",  // Changed: resolv → validate
   Pack = "pack:tile",
-  Bank = "bank:tile",
+  Bank = "EVM:tile",         // Changed: bank → EVM
 
+  // Monad: Network drops
   NetOverrun = "Too slow:net",
-  QUICOverrun = "Too slow:quic",
-  QUICInvalid = "Malformed:quic",
-  QUICTooManyFrags = "Out of buffers:quic",
-  QUICAbandoned = "Abandoned:quic",
+  QUICOverrun = "Too slow:rpc",     // Changed
+  QUICInvalid = "Malformed:rpc",    // Changed
+  QUICTooManyFrags = "Out of buffers:rpc", // Changed
+  QUICAbandoned = "Abandoned:rpc",  // Changed
+
+  // Monad: Verification drops
   VerifyOverrun = "Too slow:verify",
   VerifyParse = "Unparseable",
-  VerifyFailed = "Bad signature",
-  VerifyDuplicate = "Duplicate:verify",
-  DedupDeuplicate = "Duplicate:dedup",
-  ResolvFailed = "Bad LUT",
-  ResolvExpired = "Expired:resolv",
+  VerifyFailed = "Sig Failed",      // Changed: Bad signature → Sig Failed
+  VerifyDuplicate = "Nonce Failed", // Changed: Duplicate → Nonce Failed
+
+  // Monad: Pool/Validation drops
+  DedupDeuplicate = "Nonce Failed", // Changed: Duplicate → Nonce Failed
+  ResolvFailed = "Balance Failed",  // Changed: Bad LUT → Balance Failed
+  ResolvExpired = "Fee Too Low",    // Changed: Expired → Fee Too Low
   ResolvNoLedger = "No ledger",
-  ResolvRetained = "Unresolved:resolv",
-  PackInvalid = "Unpackable",
+  ResolvRetained = "Unresolved",    // Changed
+
+  // Monad: Packing drops
+  PackInvalid = "Invalid Tx",       // Changed: Unpackable → Invalid Tx
   PackInvalidBundle = "Bad Bundle",
   PackExpired = "Expired:pack",
   PackRetained = "Buffered:pack",
   PackLeaderSlow = "Buffer full",
-  PackWaitFull = "Storage full",
-  BankInvalid = "Unexecutable",
+  PackWaitFull = "Pool Full",       // Changed: Storage full → Pool Full
 
-  BlockSuccess = "Success",
-  BlockFailure = "Failure",
+  // Monad: EVM execution
+  BankInvalid = "Exec Failed",      // Changed: Unexecutable → Exec Failed
+
+  // Monad: Final outcomes
+  BlockSuccess = "Parallel",        // Changed: Success → Parallel
+  BlockFailure = "Sequential",      // Changed: Failure → Sequential
 
   Votes = "Votes",
   NonVoteSuccess = "Non-vote Success",
