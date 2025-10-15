@@ -12,7 +12,7 @@ import {
 export default function TransactionStats() {
   const estimated = useAtomValue(estimatedTpsAtom);
   return (
-    <Flex direction="column" gap="2" minWidth="100px">
+    <Flex direction="column" gap="2" minWidth="180px" style={{ width: "180px" }}>
       <CardStat
         label="Total TPS (1s)"
         value={

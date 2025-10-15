@@ -34,7 +34,9 @@ export default function Chart() {
     const { height, width } = sizeRefs.current;
     const maxLength = tpsData.length;
     const xRatio = (width + 2) / maxLength;
-    const yRatio = (height - 10) / (maxTotalTps || 1);
+
+    // Use 90% of height for better visualization and add padding
+    const yRatio = (height - 20) / (maxTotalTps || 1);
 
     const points = tpsData
       .map((d, i) => {
@@ -48,14 +50,15 @@ export default function Chart() {
       })
       .filter(isDefined);
 
-    const maxTotalY = height - maxTotalTps * yRatio;
+    // Position the max line near the top with padding
+    const maxTotalY = 10;
 
     return {
       avgPath: getPath(
         points.map((p) => ({ x: p.x, y: p.avgY })),
         height,
       ),
-      totalTpsY: isNaN(maxTotalY) ? undefined : maxTotalY,
+      totalTpsY: maxTotalY,
     };
   }, [maxTotalTps, tpsData]);
 
