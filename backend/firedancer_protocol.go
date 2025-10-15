@@ -219,15 +219,31 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				return
 			}
 
-			// Send estimated TPS
+			// Calculate different TPS metrics from subscriber
+			var oneSecondTPS, avgTPS, instantTPS float64
+			if monadSubscriber != nil && monadSubscriber.IsConnected() {
+				oneSecondTPS = monadSubscriber.calculateOneSecondTPS()
+				avgTPS = monadSubscriber.calculateAverageTPS()
+				instantTPS = monadSubscriber.getInstantTPS()
+			} else {
+				// Fallback to current metrics
+				oneSecondTPS = metrics.Execution.TPS
+				avgTPS = metrics.Execution.TPS
+				instantTPS = metrics.Execution.TPS
+			}
+
+			// Send estimated TPS with 3 different metrics
+			// total: 1-second TPS (most recent second)
+			// nonvote_success: Average TPS (smoothed over ~4 seconds)
+			// nonvote_failed: Instant TPS (per block, shows spikes)
 			estimatedTpsMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "estimated_tps",
 				Value: map[string]interface{}{
-					"total":          metrics.Execution.TPS,
-					"vote":           0,
-					"nonvote_success": metrics.Execution.TPS,
-					"nonvote_failed":  0,
+					"total":           oneSecondTPS,  // 1-second TPS
+					"vote":            0,
+					"nonvote_success": avgTPS,        // Average TPS
+					"nonvote_failed":  instantTPS,    // Instant TPS per block
 				},
 			}
 			if err := conn.WriteJSON(estimatedTpsMsg); err != nil {

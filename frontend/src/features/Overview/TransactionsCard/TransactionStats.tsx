@@ -14,7 +14,7 @@ export default function TransactionStats() {
   return (
     <Flex direction="column" gap="2" minWidth="100px">
       <CardStat
-        label="Total TPS"
+        label="Total TPS (1s)"
         value={
           estimated?.total.toLocaleString(undefined, {
             minimumFractionDigits: 2,
@@ -26,7 +26,7 @@ export default function TransactionStats() {
       />
       <Flex gap="4" wrap="wrap">
         <CardStat
-          label="Non-vote TPS Success"
+          label="Avg TPS"
           value={
             estimated?.nonvote_success.toLocaleString(undefined, {
               minimumFractionDigits: 2,
@@ -36,7 +36,7 @@ export default function TransactionStats() {
           valueColor={successColor}
         />
         <CardStat
-          label="Non-vote TPS Fail"
+          label="Instant TPS"
           value={
             estimated?.nonvote_failed.toLocaleString(undefined, {
               minimumFractionDigits: 2,

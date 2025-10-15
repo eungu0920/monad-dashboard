@@ -24,8 +24,18 @@ type MonadSubscriber struct {
 	latestBlock    *BlockHeader
 	isConnected    bool
 
+	// TPS calculation - track recent blocks
+	recentBlocks   []BlockTxInfo
+	maxRecentBlocks int
+
 	ctx            context.Context
 	cancel         context.CancelFunc
+}
+
+// BlockTxInfo stores transaction count and timestamp for TPS calculation
+type BlockTxInfo struct {
+	Timestamp    int64
+	Transactions int
 }
 
 // BlockHeader represents a new block header
@@ -41,11 +51,13 @@ type BlockHeader struct {
 func NewMonadSubscriber(wsURL string) *MonadSubscriber {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &MonadSubscriber{
-		wsURL:     wsURL,
-		blockChan: make(chan *BlockHeader, 100),
-		errorChan: make(chan error, 10),
-		ctx:       ctx,
-		cancel:    cancel,
+		wsURL:           wsURL,
+		blockChan:       make(chan *BlockHeader, 100),
+		errorChan:       make(chan error, 10),
+		recentBlocks:    make([]BlockTxInfo, 0, 10),
+		maxRecentBlocks: 10, // Track last 10 blocks (~4 seconds of data)
+		ctx:             ctx,
+		cancel:          cancel,
 	}
 }
 
@@ -191,13 +203,101 @@ func (s *MonadSubscriber) enrichBlockWithTransactions(header *BlockHeader) {
 	// Update transaction count
 	header.Transactions = len(block.Result.Transactions)
 
+	// Add to recent blocks for TPS calculation
+	s.addRecentBlock(header.Timestamp, header.Transactions)
+
 	// Update metrics immediately with enriched data
 	updateMetricsFromBlock(header)
 
 	// Also update epoch information based on block number
 	epoch := header.Number / 50000 // 50,000 blocks per epoch
-	log.Printf("Block %d: Epoch %d, TPS: %.2f (txs=%d)",
-		header.Number, epoch, float64(header.Transactions)/0.4, header.Transactions)
+	avgTPS := s.calculateAverageTPS()
+	log.Printf("Block %d: Epoch %d, Instant TPS: %.2f, Avg TPS: %.2f (txs=%d)",
+		header.Number, epoch, float64(header.Transactions)/0.4, avgTPS, header.Transactions)
+}
+
+// addRecentBlock adds a block to the recent blocks list for TPS calculation
+func (s *MonadSubscriber) addRecentBlock(timestamp int64, txCount int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Add new block
+	s.recentBlocks = append(s.recentBlocks, BlockTxInfo{
+		Timestamp:    timestamp,
+		Transactions: txCount,
+	})
+
+	// Keep only the most recent blocks
+	if len(s.recentBlocks) > s.maxRecentBlocks {
+		s.recentBlocks = s.recentBlocks[1:]
+	}
+}
+
+// calculateAverageTPS calculates TPS based on recent blocks (all available data)
+func (s *MonadSubscriber) calculateAverageTPS() float64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.recentBlocks) < 2 {
+		return 0
+	}
+
+	// Calculate total transactions and time span
+	totalTx := 0
+	for _, block := range s.recentBlocks {
+		totalTx += block.Transactions
+	}
+
+	// Time difference between first and last block
+	firstBlock := s.recentBlocks[0]
+	lastBlock := s.recentBlocks[len(s.recentBlocks)-1]
+	timeSpanSeconds := float64(lastBlock.Timestamp - firstBlock.Timestamp)
+
+	if timeSpanSeconds <= 0 {
+		// Fallback: use block count * 0.4s
+		timeSpanSeconds = float64(len(s.recentBlocks)-1) * 0.4
+	}
+
+	return float64(totalTx) / timeSpanSeconds
+}
+
+// calculateOneSecondTPS calculates TPS for exactly 1 second of recent blocks
+func (s *MonadSubscriber) calculateOneSecondTPS() float64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.recentBlocks) < 2 {
+		return 0
+	}
+
+	lastBlock := s.recentBlocks[len(s.recentBlocks)-1]
+	oneSecondAgo := lastBlock.Timestamp - 1 // 1 second ago
+
+	// Sum transactions from blocks within the last 1 second
+	totalTx := 0
+	for i := len(s.recentBlocks) - 1; i >= 0; i-- {
+		block := s.recentBlocks[i]
+		if block.Timestamp >= oneSecondAgo {
+			totalTx += block.Transactions
+		} else {
+			break
+		}
+	}
+
+	return float64(totalTx) // Already per second
+}
+
+// getInstantTPS returns TPS for the most recent block only
+func (s *MonadSubscriber) getInstantTPS() float64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.recentBlocks) == 0 {
+		return 0
+	}
+
+	lastBlock := s.recentBlocks[len(s.recentBlocks)-1]
+	return float64(lastBlock.Transactions) / 0.4 // Per 0.4s block time
 }
 
 // parseBlockHeader converts JSON to BlockHeader
@@ -318,8 +418,16 @@ func (h *BlockHeader) ToConsensusMetrics() *ConsensusMetrics {
 }
 
 // ToExecutionMetrics converts BlockHeader to ExecutionMetrics
+// Note: Use subscriber's calculateAverageTPS() instead for smoother TPS display
 func (h *BlockHeader) ToExecutionMetrics() *ExecutionMetrics {
-	tps := float64(h.Transactions) / 0.4 // Monad 0.4s block time
+	// Get average TPS from subscriber if available
+	var tps float64
+	if monadSubscriber != nil {
+		tps = monadSubscriber.calculateAverageTPS()
+	} else {
+		// Fallback to instant TPS
+		tps = float64(h.Transactions) / 0.4
+	}
 
 	return &ExecutionMetrics{
 		TPS:                 tps,
