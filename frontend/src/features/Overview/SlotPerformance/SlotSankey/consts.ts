@@ -7,7 +7,7 @@ export const enum SlotNode {
   // Monad: Network ingress
   IncQuic = "RPC",           // Changed: QUIC → RPC
   IncUdp = "P2P",            // Changed: UDP → P2P
-  IncGossip = "P2P",         // Changed: Gossip → P2P (same as UDP)
+  IncGossip = "Gossip",      // Keep Gossip (used for P2P display)
   IncBlockEngine = "Relayer", // Changed: Jito → Relayer
 
   SlotStart = "Received",
@@ -34,7 +34,7 @@ export const enum SlotNode {
   VerifyOverrun = "Too slow:verify",
   VerifyParse = "Unparseable",
   VerifyFailed = "Sig Failed",      // Changed: Bad signature → Sig Failed
-  VerifyDuplicate = "Nonce Failed", // Changed: Duplicate → Nonce Failed
+  VerifyDuplicate = "Duplicate",    // Keep Duplicate for verify stage
 
   // Monad: Pool/Validation drops
   DedupDeuplicate = "Nonce Failed", // Changed: Duplicate → Nonce Failed
