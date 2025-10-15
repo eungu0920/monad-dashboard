@@ -99,8 +99,17 @@ func main() {
 		go StartEventProcessing()
 	}
 
-	// Start metrics collection
-	go startMetricsCollection()
+	// Try to initialize real-time WebSocket subscription
+	wsURL := "ws://127.0.0.1:8080"
+	log.Printf("Attempting to connect to Monad WebSocket at %s...", wsURL)
+	if err := InitializeSubscriber(wsURL); err != nil {
+		log.Printf("Failed to initialize WebSocket subscriber: %v", err)
+		log.Printf("Falling back to polling mode")
+		// Start metrics collection via polling as fallback
+		go startMetricsCollection()
+	} else {
+		log.Printf("Successfully initialized real-time WebSocket subscription")
+	}
 
 	port := ":4000" // Changed from 3000 to 4000
 	log.Printf("Monad Dashboard starting on %s", port)
