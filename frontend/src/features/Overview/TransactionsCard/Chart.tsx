@@ -11,12 +11,12 @@ import {
 const getPath = (points: { x: number; y: number }[], height: number) => {
   if (!points.length) return "";
 
-  const path = points.map(({ x, y }) => `L ${x} ${height - y}`).join(" ");
+  const path = points.map(({ x, y }) => `L ${x} ${y}`).join(" ");
 
   return (
     "M" +
     path.slice(1) +
-    `L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height}, L ${points[0].x} ${points[0].y}`
+    `L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} L ${points[0].x} ${points[0].y}`
   );
 };
 
@@ -35,23 +35,26 @@ export default function Chart() {
     const maxLength = tpsData.length;
     const xRatio = (width + 2) / maxLength;
 
-    // Use 90% of height for better visualization and add padding
-    const yRatio = (height - 20) / (maxTotalTps || 1);
+    // Add padding and use full height for better visualization
+    const padding = 15;
+    const yRatio = (height - padding * 2) / (maxTotalTps || 1);
 
     const points = tpsData
       .map((d, i) => {
         if (d === undefined) return;
 
         // Only show Avg TPS (nonvote_success)
+        // Calculate y from top (SVG coordinate system)
+        const tpsValue = d.nonvote_success * yRatio;
         return {
           x: i * xRatio,
-          avgY: d.nonvote_success * yRatio, // Only Avg TPS
+          avgY: height - padding - tpsValue, // Invert to draw from bottom up
         };
       })
       .filter(isDefined);
 
     // Position the max line near the top with padding
-    const maxTotalY = 10;
+    const maxTotalY = padding;
 
     return {
       avgPath: getPath(

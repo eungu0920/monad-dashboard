@@ -60,8 +60,8 @@ func NewMonadSubscriber(wsURL string) *MonadSubscriber {
 		errorChan:       make(chan error, 10),
 		recentBlocks:    make([]BlockTxInfo, 0, 10),
 		maxRecentBlocks: 10, // Track last 10 blocks (~4 seconds of data)
-		tpsHistory:      make([][4]float64, 0, 100),
-		maxHistorySize:  100, // Keep 100 data points for chart
+		tpsHistory:      make([][4]float64, 0, 200),
+		maxHistorySize:  200, // Keep 200 data points for chart (80 seconds of data)
 		ctx:             ctx,
 		cancel:          cancel,
 	}
