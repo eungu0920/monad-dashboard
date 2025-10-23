@@ -455,15 +455,22 @@ func (h *BlockHeader) ToConsensusMetrics() *ConsensusMetrics {
 }
 
 // ToExecutionMetrics converts BlockHeader to ExecutionMetrics
-// Note: Use subscriber's calculateAverageTPS() instead for smoother TPS display
+// Note: Prioritizes Prometheus TPS for accuracy
 func (h *BlockHeader) ToExecutionMetrics() *ExecutionMetrics {
-	// Get average TPS from subscriber if available
+	// Priority 1: Use Prometheus TPS (most accurate)
 	var tps float64
-	if monadSubscriber != nil {
+	promCollector := GetPrometheusCollector()
+	if promCollector != nil && promCollector.IsHealthy() {
+		tps = promCollector.GetTPS()
+		// log.Printf("Using Prometheus TPS: %.2f", tps)
+	} else if monadSubscriber != nil {
+		// Priority 2: Use subscriber's average TPS
 		tps = monadSubscriber.calculateAverageTPS()
+		// log.Printf("Using subscriber average TPS: %.2f", tps)
 	} else {
-		// Fallback to instant TPS
+		// Priority 3: Fallback to instant TPS
 		tps = float64(h.Transactions) / 0.4
+		// log.Printf("Using instant TPS: %.2f", tps)
 	}
 
 	return &ExecutionMetrics{

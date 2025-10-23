@@ -100,6 +100,19 @@ func main() {
 		go StartEventProcessing()
 	}
 
+	// Initialize Prometheus metrics collector for accurate TPS
+	promEndpoint := os.Getenv("PROMETHEUS_ENDPOINT")
+	if promEndpoint == "" {
+		promEndpoint = "http://127.0.0.1:8889/metrics" // Default OTEL endpoint
+	}
+	log.Printf("Attempting to connect to Prometheus endpoint at %s...", promEndpoint)
+	if err := InitializePrometheusCollector(promEndpoint); err != nil {
+		log.Printf("Prometheus collector not available: %v", err)
+		log.Printf("Will calculate TPS from block data")
+	} else {
+		log.Printf("✅ Prometheus collector initialized - using accurate TPS from monad_execution_ledger_num_tx_commits")
+	}
+
 	// Initialize IPC metrics collector for real metrics
 	ipcPath := os.Getenv("MONAD_IPC_PATH")
 	if ipcPath == "" {
