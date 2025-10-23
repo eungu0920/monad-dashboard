@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -97,6 +98,19 @@ func main() {
 	} else {
 		// Start event processing if event rings are available
 		go StartEventProcessing()
+	}
+
+	// Initialize IPC metrics collector for real metrics
+	ipcPath := os.Getenv("MONAD_IPC_PATH")
+	if ipcPath == "" {
+		ipcPath = "/home/monad/monad-bft/mempool.sock" // Default path
+	}
+	log.Printf("Attempting to connect to Monad IPC at %s...", ipcPath)
+	if err := InitializeIPCCollector(ipcPath); err != nil {
+		log.Printf("IPC metrics collector not available: %v", err)
+		log.Printf("Will use estimation-based metrics")
+	} else {
+		log.Printf("✅ IPC metrics collector initialized - using real Monad metrics")
 	}
 
 	// Try to initialize real-time WebSocket subscription
