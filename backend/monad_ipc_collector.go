@@ -98,13 +98,12 @@ func (c *MonadIPCCollector) collectMetrics() {
 
 // requestMetrics requests current metrics snapshot from Monad
 func (c *MonadIPCCollector) requestMetrics() error {
-	c.mu.RLock()
-	conn := c.conn
-	c.mu.RUnlock()
-
-	if conn == nil {
-		return fmt.Errorf("not connected")
+	// Create a new connection for each request to avoid broken pipe
+	conn, err := net.Dial("unix", c.ipcPath)
+	if err != nil {
+		return fmt.Errorf("failed to dial IPC: %w", err)
 	}
+	defer conn.Close()
 
 	// Send metrics request (JSON-RPC style)
 	request := map[string]interface{}{

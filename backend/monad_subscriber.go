@@ -165,24 +165,28 @@ func (s *MonadSubscriber) handleSubscriptionMessage(msg map[string]interface{}) 
 		return
 	}
 
-	// Fetch full block details to get transaction count
-	// newHeads subscription doesn't include tx count, so we need to fetch it
-	go s.enrichBlockWithTransactions(header)
-
 	// Update latest block
 	s.mu.Lock()
 	s.latestBlock = header
 	s.mu.Unlock()
 
-	// Send to channel (non-blocking)
-	select {
-	case s.blockChan <- header:
-	default:
-		// Channel full, skip this block
-	}
+	// Fetch full block details to get transaction count, then send to channel
+	// newHeads subscription doesn't include tx count, so we need to fetch it
+	go func() {
+		// Enrich with transaction count first
+		s.enrichBlockWithTransactions(header)
 
-	log.Printf("Received new block: height=%d, hash=%s, txs=%d",
-		header.Number, header.Hash[:10], header.Transactions)
+		// Now send the enriched block to the channel for metrics update
+		select {
+		case s.blockChan <- header:
+		default:
+			// Channel full, skip this block
+			log.Printf("Block channel full, skipping block %d", header.Number)
+		}
+	}()
+
+	log.Printf("Received new block: height=%d, hash=%s (enriching...)",
+		header.Number, header.Hash[:10])
 }
 
 // enrichBlockWithTransactions fetches full block details to get transaction count
@@ -212,14 +216,16 @@ func (s *MonadSubscriber) enrichBlockWithTransactions(header *BlockHeader) {
 	// Add to recent blocks for TPS calculation
 	s.addRecentBlock(header.Timestamp, header.Transactions)
 
-	// Update metrics immediately with enriched data
-	updateMetricsFromBlock(header)
-
-	// Also update epoch information based on block number
+	// Calculate TPS metrics for logging
 	epoch := header.Number / 50000 // 50,000 blocks per epoch
+	instantTPS := float64(header.Transactions) / 0.4
 	avgTPS := s.calculateAverageTPS()
+
 	log.Printf("Block %d: Epoch %d, Instant TPS: %.2f, Avg TPS: %.2f (txs=%d)",
-		header.Number, epoch, float64(header.Transactions)/0.4, avgTPS, header.Transactions)
+		header.Number, epoch, instantTPS, avgTPS, header.Transactions)
+
+	// NOTE: Do NOT call updateMetricsFromBlock here!
+	// It will be called from processSubscribedBlocks to avoid duplicate updates
 }
 
 // addRecentBlock adds a block to the recent blocks list for TPS calculation
