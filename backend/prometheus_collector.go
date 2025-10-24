@@ -110,12 +110,20 @@ func (c *PrometheusCollector) parseMetrics(body io.Reader) error {
 		}
 
 		// Parse metric line: metric_name{labels} value timestamp
+		// Example: monad_execution_ledger_num_tx_commits{job="testnet"} 863080221 1761214210873
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
 			continue
 		}
 
-		metricName := strings.Split(parts[0], "{")[0]
+		// Extract metric name (before '{' or space)
+		metricNameFull := parts[0]
+		metricName := metricNameFull
+		if idx := strings.Index(metricNameFull, "{"); idx > 0 {
+			metricName = metricNameFull[:idx]
+		}
+
+		// Parse value (second field)
 		valueStr := parts[1]
 		value, err := strconv.ParseFloat(valueStr, 64)
 		if err != nil {
@@ -143,8 +151,16 @@ func (c *PrometheusCollector) parseMetrics(body io.Reader) error {
 		txDiff := newMetrics.TxCommitsTotal - prevTxCommits
 		newMetrics.TPS60s = txDiff / timeDiff
 
-		log.Printf("📊 Prometheus TPS: %.2f tx/s (commits: %.0f -> %.0f over %.1fs)",
-			newMetrics.TPS60s, prevTxCommits, newMetrics.TxCommitsTotal, timeDiff)
+		if prevTxCommits > 0 {
+			// Only log if we have a previous value (not first collection)
+			log.Printf("📊 Prometheus TPS: %.2f tx/s (commits: %.0f -> %.0f, diff: %.0f over %.1fs)",
+				newMetrics.TPS60s, prevTxCommits, newMetrics.TxCommitsTotal, txDiff, timeDiff)
+		} else {
+			// First collection
+			log.Printf("📊 Prometheus: Initial tx_commits value: %.0f", newMetrics.TxCommitsTotal)
+		}
+	} else if newMetrics.TxCommitsTotal == 0 {
+		log.Printf("⚠️  Prometheus: monad_execution_ledger_num_tx_commits not found in metrics")
 	}
 
 	newMetrics.LastUpdateTime = now
