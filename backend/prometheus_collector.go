@@ -26,7 +26,7 @@ type PrometheusCollector struct {
 type PrometheusMetrics struct {
 	// Transaction commit metrics
 	TxCommits       float64 // monad_execution_ledger_num_tx_commits
-	TxCommitsTotal  float64 // Total counter value
+	TxCommitsTotal  float64 // Total counter value (cumulative)
 
 	// TPS calculation (rate over 60s)
 	TPS60s          float64 // Calculated from rate
@@ -34,20 +34,28 @@ type PrometheusMetrics struct {
 	// Other execution metrics
 	BlocksCommitted float64 // monad_execution_ledger_num_blocks_committed
 
-	// TxPool metrics (if available)
-	InsertOwnedTxs       float64 // monad_bft_txpool_pool_insert_owned_txs
-	InsertForwardedTxs   float64 // monad_bft_txpool_pool_insert_forwarded_txs
-	DropInvalidSignature float64 // monad_bft_txpool_pool_drop_not_well_formed
-	DropNonceTooLow      float64 // monad_bft_txpool_pool_drop_nonce_too_low
-	DropFeeTooLow        float64 // monad_bft_txpool_pool_drop_fee_too_low
-	DropInsufficientBalance float64 // monad_bft_txpool_pool_drop_insufficient_balance
-	DropPoolFull         float64 // monad_bft_txpool_pool_drop_pool_full
-	PendingTxs           float64 // monad_bft_txpool_pool_pending_txs
-	TrackedTxs           float64 // monad_bft_txpool_pool_tracked_txs
+	// TxPool metrics - CUMULATIVE counters from Prometheus
+	InsertOwnedTxsTotal       float64 // monad_bft_txpool_pool_insert_owned_txs (cumulative)
+	InsertForwardedTxsTotal   float64 // monad_bft_txpool_pool_insert_forwarded_txs (cumulative)
+	DropInvalidSignatureTotal float64 // monad_bft_txpool_pool_drop_not_well_formed (cumulative)
+	DropNonceTooLowTotal      float64 // monad_bft_txpool_pool_drop_nonce_too_low (cumulative)
+	DropFeeTooLowTotal        float64 // monad_bft_txpool_pool_drop_fee_too_low (cumulative)
+	DropInsufficientBalanceTotal float64 // monad_bft_txpool_pool_drop_insufficient_balance (cumulative)
+	DropPoolFullTotal         float64 // monad_bft_txpool_pool_drop_pool_full (cumulative)
+	PendingTxs                float64 // monad_bft_txpool_pool_pending_txs (gauge, not cumulative)
+	TrackedTxs                float64 // monad_bft_txpool_pool_tracked_txs (gauge, not cumulative)
+
+	// TxPool metrics - RATE (change per collection interval)
+	InsertOwnedTxsRate       float64 // Rate of RPC transactions
+	InsertForwardedTxsRate   float64 // Rate of P2P transactions
+	DropInvalidSignatureRate float64 // Rate of signature failures
+	DropNonceTooLowRate      float64 // Rate of nonce failures
+	DropFeeTooLowRate        float64 // Rate of fee failures
+	DropInsufficientBalanceRate float64 // Rate of balance failures
+	DropPoolFullRate         float64 // Rate of pool full drops
 
 	// Timestamps
 	LastUpdated     time.Time
-	LastTxCommits   float64 // Previous value for rate calculation
 	LastUpdateTime  time.Time
 }
 
@@ -108,7 +116,7 @@ func (c *PrometheusCollector) parseMetrics(body io.Reader) error {
 
 	// Keep previous values for rate calculation
 	c.mu.RLock()
-	prevTxCommits := c.metrics.TxCommitsTotal
+	prevMetrics := *c.metrics // Copy all previous values
 	prevTime := c.metrics.LastUpdateTime
 	c.mu.RUnlock()
 
@@ -141,7 +149,7 @@ func (c *PrometheusCollector) parseMetrics(body io.Reader) error {
 			continue
 		}
 
-		// Extract relevant metrics
+		// Extract relevant metrics (CUMULATIVE values)
 		switch metricName {
 		case "monad_execution_ledger_num_tx_commits":
 			newMetrics.TxCommitsTotal = value
@@ -152,23 +160,23 @@ func (c *PrometheusCollector) parseMetrics(body io.Reader) error {
 
 		// TxPool metrics (actual Monad metric names with "pool_" prefix)
 		case "monad_bft_txpool_pool_insert_owned_txs":
-			newMetrics.InsertOwnedTxs = value
+			newMetrics.InsertOwnedTxsTotal = value
 		case "monad_bft_txpool_pool_insert_forwarded_txs":
-			newMetrics.InsertForwardedTxs = value
+			newMetrics.InsertForwardedTxsTotal = value
 		case "monad_bft_txpool_pool_drop_not_well_formed":
-			newMetrics.DropInvalidSignature = value // Map to signature validation
+			newMetrics.DropInvalidSignatureTotal = value
 		case "monad_bft_txpool_pool_drop_nonce_too_low":
-			newMetrics.DropNonceTooLow = value
+			newMetrics.DropNonceTooLowTotal = value
 		case "monad_bft_txpool_pool_drop_fee_too_low":
-			newMetrics.DropFeeTooLow = value
+			newMetrics.DropFeeTooLowTotal = value
 		case "monad_bft_txpool_pool_drop_insufficient_balance":
-			newMetrics.DropInsufficientBalance = value
+			newMetrics.DropInsufficientBalanceTotal = value
 		case "monad_bft_txpool_pool_drop_pool_full":
-			newMetrics.DropPoolFull = value
+			newMetrics.DropPoolFullTotal = value
 		case "monad_bft_txpool_pool_pending_txs":
-			newMetrics.PendingTxs = value
+			newMetrics.PendingTxs = value // Gauge, not cumulative
 		case "monad_bft_txpool_pool_tracked_txs":
-			newMetrics.TrackedTxs = value
+			newMetrics.TrackedTxs = value // Gauge, not cumulative
 		}
 	}
 
@@ -176,22 +184,30 @@ func (c *PrometheusCollector) parseMetrics(body io.Reader) error {
 		return fmt.Errorf("error reading metrics: %w", err)
 	}
 
-	// Calculate TPS as rate over time
+	// Calculate rates for ALL counters
 	now := time.Now()
 	timeDiff := now.Sub(prevTime).Seconds()
 
-	if timeDiff > 0 && newMetrics.TxCommitsTotal > 0 {
-		txDiff := newMetrics.TxCommitsTotal - prevTxCommits
+	if timeDiff > 0 && prevMetrics.TxCommitsTotal > 0 {
+		// TPS calculation
+		txDiff := newMetrics.TxCommitsTotal - prevMetrics.TxCommitsTotal
 		newMetrics.TPS60s = txDiff / timeDiff
 
-		if prevTxCommits > 0 {
-			// Only log if we have a previous value (not first collection)
-			log.Printf("📊 Prometheus TPS: %.2f tx/s (commits: %.0f -> %.0f, diff: %.0f over %.1fs)",
-				newMetrics.TPS60s, prevTxCommits, newMetrics.TxCommitsTotal, txDiff, timeDiff)
-		} else {
-			// First collection
-			log.Printf("📊 Prometheus: Initial tx_commits value: %.0f", newMetrics.TxCommitsTotal)
-		}
+		// TxPool rates (change since last collection)
+		newMetrics.InsertOwnedTxsRate = (newMetrics.InsertOwnedTxsTotal - prevMetrics.InsertOwnedTxsTotal) / timeDiff
+		newMetrics.InsertForwardedTxsRate = (newMetrics.InsertForwardedTxsTotal - prevMetrics.InsertForwardedTxsTotal) / timeDiff
+		newMetrics.DropInvalidSignatureRate = (newMetrics.DropInvalidSignatureTotal - prevMetrics.DropInvalidSignatureTotal) / timeDiff
+		newMetrics.DropNonceTooLowRate = (newMetrics.DropNonceTooLowTotal - prevMetrics.DropNonceTooLowTotal) / timeDiff
+		newMetrics.DropFeeTooLowRate = (newMetrics.DropFeeTooLowTotal - prevMetrics.DropFeeTooLowTotal) / timeDiff
+		newMetrics.DropInsufficientBalanceRate = (newMetrics.DropInsufficientBalanceTotal - prevMetrics.DropInsufficientBalanceTotal) / timeDiff
+		newMetrics.DropPoolFullRate = (newMetrics.DropPoolFullTotal - prevMetrics.DropPoolFullTotal) / timeDiff
+
+		log.Printf("📊 Prometheus TPS: %.2f tx/s (commits: %.0f -> %.0f, diff: %.0f over %.1fs)",
+			newMetrics.TPS60s, prevMetrics.TxCommitsTotal, newMetrics.TxCommitsTotal, txDiff, timeDiff)
+	} else if newMetrics.TxCommitsTotal > 0 && prevMetrics.TxCommitsTotal == 0 {
+		// First collection
+		log.Printf("📊 Prometheus: Initial collection - tx_commits: %.0f, insert_owned: %.0f, insert_forwarded: %.0f",
+			newMetrics.TxCommitsTotal, newMetrics.InsertOwnedTxsTotal, newMetrics.InsertForwardedTxsTotal)
 	} else if newMetrics.TxCommitsTotal == 0 {
 		log.Printf("⚠️  Prometheus: monad_execution_ledger_num_tx_commits not found in metrics")
 	}

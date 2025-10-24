@@ -289,36 +289,50 @@ func GenerateWaterfallFromSubscriber() map[string]interface{} {
 
 // generateWaterfallFromPrometheus generates waterfall from Prometheus metrics
 func generateWaterfallFromPrometheus(metrics *PrometheusMetrics) map[string]interface{} {
-	// Use actual Prometheus counters!
+	// Use RATE values (not cumulative totals!) for waterfall visualization
+	// Multiply by 5 seconds (collection interval) to get counts per interval
+	interval := 5.0
+
+	insertOwnedCount := int64(metrics.InsertOwnedTxsRate * interval)
+	insertForwardedCount := int64(metrics.InsertForwardedTxsRate * interval)
+	dropSigCount := int64(metrics.DropInvalidSignatureRate * interval)
+	dropNonceCount := int64(metrics.DropNonceTooLowRate * interval)
+	dropBalanceCount := int64(metrics.DropInsufficientBalanceRate * interval)
+	dropFeeCount := int64(metrics.DropFeeTooLowRate * interval)
+	dropPoolFullCount := int64(metrics.DropPoolFullRate * interval)
+
+	// Calculate successful txs (TPS * interval)
+	successfulTxs := int64(metrics.TPS60s * interval)
+
 	return map[string]interface{}{
 		"in": map[string]interface{}{
-			"rpc":    int64(metrics.InsertOwnedTxs),    // ✅ Real: RPC transactions
-			"p2p":    int64(metrics.InsertForwardedTxs), // ✅ Real: P2P transactions
-			"gossip": int64(metrics.InsertForwardedTxs),
+			"rpc":    insertOwnedCount,    // ✅ Real: RPC transactions (per 5s)
+			"p2p":    insertForwardedCount, // ✅ Real: P2P transactions (per 5s)
+			"gossip": insertForwardedCount,
 		},
 		"out": map[string]interface{}{
 			// Verification stage - Real counters from Prometheus!
-			"verify_failed":      int64(metrics.DropInvalidSignature),     // ✅ Real
-			"nonce_failed":       int64(metrics.DropNonceTooLow),         // ✅ Real
-			"balance_failed":     int64(metrics.DropInsufficientBalance), // ✅ Real
+			"verify_failed":      dropSigCount,     // ✅ Real (per 5s)
+			"nonce_failed":       dropNonceCount,   // ✅ Real (per 5s)
+			"balance_failed":     dropBalanceCount, // ✅ Real (per 5s)
 
 			// Pool stage - Real counters from Prometheus!
-			"pool_fee_dropped":   int64(metrics.DropFeeTooLow), // ✅ Real
-			"pool_full":          int64(metrics.DropPoolFull),  // ✅ Real
+			"pool_fee_dropped":   dropFeeCount,     // ✅ Real (per 5s)
+			"pool_full":          dropPoolFullCount, // ✅ Real (per 5s)
 
-			// Execution stage - calculated from tx_commits
-			"exec_parallel":      int64(metrics.TxCommitsTotal * 0.85),  // 85% parallel (estimate)
-			"exec_sequential":    int64(metrics.TxCommitsTotal * 0.15),  // 15% sequential (estimate)
+			// Execution stage - calculated from successful txs
+			"exec_parallel":      int64(float64(successfulTxs) * 0.85),  // 85% parallel (estimate)
+			"exec_sequential":    int64(float64(successfulTxs) * 0.15),  // 15% sequential (estimate)
 			"exec_failed":        int64(0),
 
-			// State stage - estimates based on commits
-			"state_reads":        int64(metrics.TxCommitsTotal * 3),  // ~3 reads per tx
-			"state_writes":       int64(metrics.TxCommitsTotal),      // ~1 write per tx
-			"logs_emitted":       int64(metrics.TxCommitsTotal / 3),  // ~33% emit logs
+			// State stage - estimates based on successful txs
+			"state_reads":        successfulTxs * 3,  // ~3 reads per tx
+			"state_writes":       successfulTxs,      // ~1 write per tx
+			"logs_emitted":       successfulTxs / 3,  // ~33% emit logs
 
-			// Block stage
-			"block_proposed":     int64(metrics.BlocksCommitted),
-			"block_finalized":    int64(metrics.BlocksCommitted),
+			// Block stage (blocks per 5s interval)
+			"block_proposed":     int64(interval / 0.4),  // ~12 blocks per 5s (0.4s block time)
+			"block_finalized":    int64(interval / 0.4),
 		},
 		"metadata": map[string]interface{}{
 			"source":       "prometheus_metrics",
@@ -326,6 +340,7 @@ func generateWaterfallFromPrometheus(metrics *PrometheusMetrics) map[string]inte
 			"pending_txs":  int64(metrics.PendingTxs),
 			"tracked_txs":  int64(metrics.TrackedTxs),
 			"tps":          metrics.TPS60s,
+			"interval_seconds": interval,
 		},
 	}
 }

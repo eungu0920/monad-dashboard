@@ -88,11 +88,22 @@ func (c *MonadIPCCollector) collectMetrics() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
+	errorCount := 0
+	lastErrorLog := time.Time{}
+
 	for range ticker.C {
 		if err := c.requestMetrics(); err != nil {
-			log.Printf("Error collecting metrics: %v", err)
+			errorCount++
+			// Only log every 30 seconds to reduce noise
+			if time.Since(lastErrorLog) > 30*time.Second {
+				log.Printf("IPC metrics collection failing (monad_getMetrics not implemented): %d errors in last 30s", errorCount)
+				errorCount = 0
+				lastErrorLog = time.Now()
+			}
 			continue
 		}
+		// Reset error count on success
+		errorCount = 0
 	}
 }
 
