@@ -184,15 +184,25 @@ func GetWaterfallMetrics() *WaterfallStageMetrics {
 }
 
 // GenerateWaterfallFromSubscriber generates waterfall metrics from real-time block data
-// Now with real IPC metrics when available
+// Now with real Prometheus/IPC metrics when available
 func GenerateWaterfallFromSubscriber() map[string]interface{} {
-	// Try to use real IPC metrics first
-	collector := GetIPCCollector()
-	if collector != nil && collector.IsHealthy() {
-		return generateWaterfallFromRealMetrics(collector.GetMetrics())
+	// Priority 1: Try Prometheus metrics (most comprehensive)
+	promCollector := GetPrometheusCollector()
+	if promCollector != nil && promCollector.IsHealthy() {
+		promMetrics := promCollector.GetMetrics()
+		// Check if we have txpool metrics in Prometheus
+		if promMetrics.InsertOwnedTxs > 0 || promMetrics.InsertForwardedTxs > 0 {
+			return generateWaterfallFromPrometheus(promMetrics)
+		}
 	}
 
-	// Fallback to block-based estimation
+	// Priority 2: Try IPC metrics
+	ipcCollector := GetIPCCollector()
+	if ipcCollector != nil && ipcCollector.IsHealthy() {
+		return generateWaterfallFromRealMetrics(ipcCollector.GetMetrics())
+	}
+
+	// Priority 3: Fallback to block-based estimation
 	if monadSubscriber == nil || !monadSubscriber.IsConnected() {
 		return generateMockWaterfall()
 	}
@@ -273,6 +283,49 @@ func GenerateWaterfallFromSubscriber() map[string]interface{} {
 			"block_hash":         block.Hash,
 			"block_txs":          block.Transactions,
 			"timestamp":          block.Timestamp,
+		},
+	}
+}
+
+// generateWaterfallFromPrometheus generates waterfall from Prometheus metrics
+func generateWaterfallFromPrometheus(metrics *PrometheusMetrics) map[string]interface{} {
+	// Use actual Prometheus counters!
+	return map[string]interface{}{
+		"in": map[string]interface{}{
+			"rpc":    int64(metrics.InsertOwnedTxs),    // ✅ Real: RPC transactions
+			"p2p":    int64(metrics.InsertForwardedTxs), // ✅ Real: P2P transactions
+			"gossip": int64(metrics.InsertForwardedTxs),
+		},
+		"out": map[string]interface{}{
+			// Verification stage - Real counters from Prometheus!
+			"verify_failed":      int64(metrics.DropInvalidSignature),     // ✅ Real
+			"nonce_failed":       int64(metrics.DropNonceTooLow),         // ✅ Real
+			"balance_failed":     int64(metrics.DropInsufficientBalance), // ✅ Real
+
+			// Pool stage - Real counters from Prometheus!
+			"pool_fee_dropped":   int64(metrics.DropFeeTooLow), // ✅ Real
+			"pool_full":          int64(metrics.DropPoolFull),  // ✅ Real
+
+			// Execution stage - calculated from tx_commits
+			"exec_parallel":      int64(metrics.TxCommitsTotal * 0.85),  // 85% parallel (estimate)
+			"exec_sequential":    int64(metrics.TxCommitsTotal * 0.15),  // 15% sequential (estimate)
+			"exec_failed":        int64(0),
+
+			// State stage - estimates based on commits
+			"state_reads":        int64(metrics.TxCommitsTotal * 3),  // ~3 reads per tx
+			"state_writes":       int64(metrics.TxCommitsTotal),      // ~1 write per tx
+			"logs_emitted":       int64(metrics.TxCommitsTotal / 3),  // ~33% emit logs
+
+			// Block stage
+			"block_proposed":     int64(metrics.BlocksCommitted),
+			"block_finalized":    int64(metrics.BlocksCommitted),
+		},
+		"metadata": map[string]interface{}{
+			"source":       "prometheus_metrics",
+			"last_updated": metrics.LastUpdated.Unix(),
+			"pending_txs":  int64(metrics.PendingTxs),
+			"tracked_txs":  int64(metrics.TrackedTxs),
+			"tps":          metrics.TPS60s,
 		},
 	}
 }

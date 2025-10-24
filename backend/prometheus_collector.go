@@ -34,6 +34,17 @@ type PrometheusMetrics struct {
 	// Other execution metrics
 	BlocksCommitted float64 // monad_execution_ledger_num_blocks_committed
 
+	// TxPool metrics (if available)
+	InsertOwnedTxs       float64 // monad_txpool_insert_owned_txs
+	InsertForwardedTxs   float64 // monad_txpool_insert_forwarded_txs
+	DropInvalidSignature float64 // monad_txpool_drop_invalid_signature
+	DropNonceTooLow      float64 // monad_txpool_drop_nonce_too_low
+	DropFeeTooLow        float64 // monad_txpool_drop_fee_too_low
+	DropInsufficientBalance float64 // monad_txpool_drop_insufficient_balance
+	DropPoolFull         float64 // monad_txpool_drop_pool_full
+	PendingTxs           float64 // monad_txpool_pending_txs
+	TrackedTxs           float64 // monad_txpool_tracked_txs
+
 	// Timestamps
 	LastUpdated     time.Time
 	LastTxCommits   float64 // Previous value for rate calculation
@@ -136,6 +147,26 @@ func (c *PrometheusCollector) parseMetrics(body io.Reader) error {
 			newMetrics.TxCommitsTotal = value
 		case "monad_execution_ledger_num_blocks_committed":
 			newMetrics.BlocksCommitted = value
+
+		// TxPool metrics
+		case "monad_txpool_insert_owned_txs":
+			newMetrics.InsertOwnedTxs = value
+		case "monad_txpool_insert_forwarded_txs":
+			newMetrics.InsertForwardedTxs = value
+		case "monad_txpool_drop_invalid_signature":
+			newMetrics.DropInvalidSignature = value
+		case "monad_txpool_drop_nonce_too_low":
+			newMetrics.DropNonceTooLow = value
+		case "monad_txpool_drop_fee_too_low":
+			newMetrics.DropFeeTooLow = value
+		case "monad_txpool_drop_insufficient_balance":
+			newMetrics.DropInsufficientBalance = value
+		case "monad_txpool_drop_pool_full":
+			newMetrics.DropPoolFull = value
+		case "monad_txpool_pending_txs":
+			newMetrics.PendingTxs = value
+		case "monad_txpool_tracked_txs":
+			newMetrics.TrackedTxs = value
 		}
 	}
 
