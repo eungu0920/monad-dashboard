@@ -190,8 +190,8 @@ func GenerateWaterfallFromSubscriber() map[string]interface{} {
 	promCollector := GetPrometheusCollector()
 	if promCollector != nil && promCollector.IsHealthy() {
 		promMetrics := promCollector.GetMetrics()
-		// Check if we have txpool metrics in Prometheus
-		if promMetrics.InsertOwnedTxs > 0 || promMetrics.InsertForwardedTxs > 0 {
+		// Check if we have txpool metrics in Prometheus (use Total fields)
+		if promMetrics.InsertOwnedTxsTotal > 0 || promMetrics.InsertForwardedTxsTotal > 0 {
 			return generateWaterfallFromPrometheus(promMetrics)
 		}
 	}
