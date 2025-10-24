@@ -155,7 +155,11 @@ if curl -sf "$PROMETHEUS_ENDPOINT" > /dev/null; then
         echo ""
 
         if [ ! -z "$VALUE2" ]; then
-            DIFF=$(echo "$VALUE2 - $VALUE1" | bc)
+            # Convert scientific notation to regular number
+            VALUE1_FIXED=$(printf "%.0f" "$VALUE1")
+            VALUE2_FIXED=$(printf "%.0f" "$VALUE2")
+
+            DIFF=$(echo "$VALUE2_FIXED - $VALUE1_FIXED" | bc)
             TPS=$(echo "scale=2; $DIFF / 5" | bc)
 
             if [ $(echo "$TPS > 0" | bc) -eq 1 ]; then
