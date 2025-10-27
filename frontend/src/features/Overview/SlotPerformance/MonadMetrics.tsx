@@ -21,26 +21,34 @@ export default function MonadMetrics() {
     return null;
   }
 
-  const metadata = waterfallV2.metadata;
+  const metadata = waterfallV2.metadata as any;
+  const drops = waterfallV2.drops as any;
+
+  // Calculate ingress metrics
+  const rpcSubmit = Number(metadata.rpc_submit) || 0;
+  const p2pGossip = Number(metadata.p2p_gossip) || 0;
+  const totalIngress = rpcSubmit + p2pGossip;
 
   return (
     <Flex gap="2" wrap="wrap" style={{ marginTop: "16px" }}>
       {/* 1. Transaction Ingress */}
-      <MetricCard
-        title="Tx Ingress"
-        metrics={[
-          { label: "RPC Submit", value: metadata.rpc_submit || 0 },
-          { label: "P2P Gossip", value: metadata.p2p_gossip || 0 },
-          { label: "Total", value: (metadata.rpc_submit || 0) + (metadata.p2p_gossip || 0) },
-        ]}
-      />
+      {(rpcSubmit > 0 || p2pGossip > 0) && (
+        <MetricCard
+          title="Tx Ingress"
+          metrics={[
+            { label: "RPC Submit", value: rpcSubmit },
+            { label: "P2P Gossip", value: p2pGossip },
+            { label: "Total", value: totalIngress },
+          ]}
+        />
+      )}
 
       {/* 2. Mempool */}
       <MetricCard
         title="Mempool"
         metrics={[
-          { label: "Pending", value: metadata.pending_txs || 0 },
-          { label: "Tracked", value: metadata.tracked_txs || 0 },
+          { label: "Pending", value: Number(metadata.pending_txs) || 0 },
+          { label: "Tracked", value: Number(metadata.tracked_txs) || 0 },
         ]}
       />
 
@@ -49,9 +57,9 @@ export default function MonadMetrics() {
         <MetricCard
           title="Consensus"
           metrics={[
-            { label: "Proposed", value: consensus.proposed_blocks || 0 },
-            { label: "Voted", value: consensus.voted_blocks || 0 },
-            { label: "Finalized", value: consensus.finalized_blocks || 0 },
+            { label: "Proposed", value: Number((consensus as any).proposed_blocks) || 0 },
+            { label: "Voted", value: Number((consensus as any).voted_blocks) || 0 },
+            { label: "Finalized", value: Number((consensus as any).finalized_blocks) || 0 },
           ]}
         />
       )}
@@ -60,20 +68,20 @@ export default function MonadMetrics() {
       <MetricCard
         title="Execution"
         metrics={[
-          { label: "TPS", value: metadata.tps?.toFixed(2) || "0.00" },
-          { label: "Blocks", value: metadata.blocks_committed || 0 },
+          { label: "TPS", value: metadata.tps ? Number(metadata.tps).toFixed(2) : "0.00" },
+          { label: "Blocks", value: Number(metadata.blocks_committed || metadata.block_height) || 0 },
         ]}
       />
 
       {/* 5. Transaction Drops */}
-      {metadata.drops && (
+      {drops && (
         <MetricCard
           title="Tx Drops"
           metrics={[
-            { label: "Signature", value: metadata.drops.invalid_signature || 0 },
-            { label: "Nonce", value: metadata.drops.nonce_invalid || 0 },
-            { label: "Fee Too Low", value: metadata.drops.fee_too_low || 0 },
-            { label: "Pool Full", value: metadata.drops.pool_full || 0 },
+            { label: "Signature", value: Number(drops.invalid_signature) || 0 },
+            { label: "Nonce", value: Number(drops.nonce_invalid) || 0 },
+            { label: "Fee Too Low", value: Number(drops.fee_too_low) || 0 },
+            { label: "Block Full", value: Number(drops.block_full || drops.pool_full) || 0 },
           ]}
         />
       )}
