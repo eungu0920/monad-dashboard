@@ -25,9 +25,15 @@ var upgrader = websocket.Upgrader{
 	Subprotocols: []string{"compress-zstd"},
 }
 
+// wsClient wraps a WebSocket connection with a mutex for safe concurrent writes
+type wsClient struct {
+	conn *websocket.Conn
+	mu   sync.Mutex
+}
+
 // WebSocket client registry for broadcasting transaction logs
 var (
-	wsClients   = make(map[*websocket.Conn]bool)
+	wsClients   = make(map[*websocket.Conn]*wsClient)
 	wsClientsMu sync.RWMutex
 )
 
@@ -35,7 +41,7 @@ var (
 func registerWSClient(conn *websocket.Conn) {
 	wsClientsMu.Lock()
 	defer wsClientsMu.Unlock()
-	wsClients[conn] = true
+	wsClients[conn] = &wsClient{conn: conn}
 	log.Printf("WebSocket client registered. Total clients: %d", len(wsClients))
 }
 
@@ -47,15 +53,41 @@ func unregisterWSClient(conn *websocket.Conn) {
 	log.Printf("WebSocket client unregistered. Total clients: %d", len(wsClients))
 }
 
+// getWSClient retrieves the wsClient for a connection
+func getWSClient(conn *websocket.Conn) *wsClient {
+	wsClientsMu.RLock()
+	defer wsClientsMu.RUnlock()
+	return wsClients[conn]
+}
+
+// safeWriteJSON writes JSON to a WebSocket connection with mutex protection
+func safeWriteJSON(conn *websocket.Conn, v interface{}) error {
+	client := getWSClient(conn)
+	if client == nil {
+		return conn.WriteJSON(v) // Fallback if not registered yet
+	}
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	return client.conn.WriteJSON(v)
+}
+
 // broadcastToAllClients sends a message to all connected WebSocket clients
 func broadcastToAllClients(msg interface{}) {
 	wsClientsMu.RLock()
-	defer wsClientsMu.RUnlock()
+	clients := make([]*wsClient, 0, len(wsClients))
+	for _, client := range wsClients {
+		clients = append(clients, client)
+	}
+	wsClientsMu.RUnlock()
 
-	for client := range wsClients {
-		if err := client.WriteJSON(msg); err != nil {
+	// Write to each client with its own mutex to prevent concurrent writes
+	for _, client := range clients {
+		client.mu.Lock()
+		err := client.conn.WriteJSON(msg)
+		client.mu.Unlock()
+
+		if err != nil {
 			log.Printf("Error broadcasting to client: %v", err)
-			// Don't remove client here - it will be removed when connection closes
 		}
 	}
 }

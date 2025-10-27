@@ -74,7 +74,7 @@ func sendInitialSummaryMessages(conn *websocket.Conn) error {
 	}
 
 	for _, msg := range messages {
-		if err := conn.WriteJSON(msg); err != nil {
+		if err := safeWriteJSON(conn, msg); err != nil {
 			return err
 		}
 	}
@@ -202,7 +202,7 @@ func sendPeersMessage(conn *websocket.Conn) error {
 		totalValidators, activeValidators, offlineValidators,
 		rpcCount, activeStakeLamports)
 
-	return conn.WriteJSON(peersMsg)
+	return safeWriteJSON(conn, peersMsg)
 }
 
 // Send epoch information
@@ -235,7 +235,7 @@ func sendEpochMessage(conn *websocket.Conn) error {
 		},
 	}
 
-	return conn.WriteJSON(epochMsg)
+	return safeWriteJSON(conn, epochMsg)
 }
 
 // Send periodic updates
@@ -277,7 +277,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				Value: nil,
 				ID:    &pingID,
 			}
-			if err := conn.WriteJSON(pingMsg); err != nil {
+			if err := safeWriteJSON(conn, pingMsg); err != nil {
 				log.Printf("Error sending ping: %v", err)
 				return
 			}
@@ -288,7 +288,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				Key:   "estimated_slot",
 				Value: currentBlockHeight,
 			}
-			if err := conn.WriteJSON(estimatedSlotMsg); err != nil {
+			if err := safeWriteJSON(conn, estimatedSlotMsg); err != nil {
 				log.Printf("Error sending estimated_slot: %v", err)
 				return
 			}
@@ -299,7 +299,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				Key:   "root_slot",
 				Value: currentBlockHeight,
 			}
-			if err := conn.WriteJSON(rootSlotMsg); err != nil {
+			if err := safeWriteJSON(conn, rootSlotMsg); err != nil {
 				log.Printf("Error sending root_slot: %v", err)
 				return
 			}
@@ -309,7 +309,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				Key:   "completed_slot",
 				Value: currentBlockHeight,
 			}
-			if err := conn.WriteJSON(completedSlotMsg); err != nil {
+			if err := safeWriteJSON(conn, completedSlotMsg); err != nil {
 				log.Printf("Error sending completed_slot: %v", err)
 				return
 			}
@@ -322,10 +322,8 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				avgTPS = monadSubscriber.calculateAverageTPS()
 				instantTPS = monadSubscriber.getInstantTPS()
 
-				// Get transaction count from latest block
-				if block := monadSubscriber.GetLatestBlock(); block != nil {
-					txCount = block.Transactions
-				}
+				// Use 1-second transaction count (same as oneSecondTPS logic)
+				txCount = int(oneSecondTPS)
 
 				// Add to history ONLY on new blocks (for chart)
 				if isNewBlock {
@@ -337,6 +335,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				oneSecondTPS = metrics.Execution.TPS
 				avgTPS = metrics.Execution.TPS
 				instantTPS = metrics.Execution.TPS
+				txCount = int(oneSecondTPS)
 			}
 
 			// Send estimated TPS only once per second
@@ -352,7 +351,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 						"tx_count":        txCount,       // Latest block tx count
 					},
 				}
-				if err := conn.WriteJSON(estimatedTpsMsg); err != nil {
+				if err := safeWriteJSON(conn, estimatedTpsMsg); err != nil {
 					log.Printf("Error sending estimated_tps: %v", err)
 					return
 				}
@@ -376,7 +375,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				Key:   "monad_waterfall_v2",
 				Value: monadWaterfallData,
 			}
-			if err := conn.WriteJSON(waterfallMsg); err != nil {
+			if err := safeWriteJSON(conn, waterfallMsg); err != nil {
 				log.Printf("Error sending Monad waterfall v2: %v", err)
 				return
 			}
@@ -432,7 +431,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 					},
 				},
 			}
-			if err := conn.WriteJSON(legacyWaterfallMsg); err != nil {
+			if err := safeWriteJSON(conn, legacyWaterfallMsg); err != nil {
 				log.Printf("Error sending legacy waterfall: %v", err)
 				return
 			}
@@ -445,7 +444,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 					Key:   "monad_consensus_state",
 					Value: consensusTracker.GetConsensusState(),
 				}
-				if err := conn.WriteJSON(consensusStateMsg); err != nil {
+				if err := safeWriteJSON(conn, consensusStateMsg); err != nil {
 					log.Printf("Error sending consensus state: %v", err)
 					return
 				}
@@ -457,7 +456,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				Key:   "vote_distance",
 				Value: 0,
 			}
-			if err := conn.WriteJSON(voteDistanceMsg); err != nil {
+			if err := safeWriteJSON(conn, voteDistanceMsg); err != nil {
 				log.Printf("Error sending vote_distance: %v", err)
 				return
 			}
@@ -484,7 +483,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 					Key:   "tps_history",
 					Value: tpsHistoryData,
 				}
-				if err := conn.WriteJSON(tpsHistoryMsg); err != nil {
+				if err := safeWriteJSON(conn, tpsHistoryMsg); err != nil {
 					log.Printf("Error sending tps_history: %v", err)
 					return
 				}
