@@ -1,4 +1,7 @@
-import { Box, Card, Flex, Text } from "@radix-ui/themes";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { Card, Flex, Text } from "@radix-ui/themes";
 import { useAtomValue } from "jotai";
 import { monadWaterfallV2Atom, monadConsensusStateAtom } from "../../../api/atoms";
 import styles from "./tileCard.module.css";

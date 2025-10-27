@@ -51,7 +51,6 @@ import type {
   LiveTxnWaterfall,
   SlotResponse,
   MonadWaterfallV2,
-  MonadConsensusState,
 } from "./types";
 import { useThrottledCallback } from "use-debounce";
 import { useInterval } from "react-use";

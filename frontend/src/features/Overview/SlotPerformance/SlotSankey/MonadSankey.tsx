@@ -3,7 +3,7 @@ import { Sankey } from "../../../../sankey";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { useAtomValue } from "jotai";
 import { monadWaterfallV2Atom } from "../../../../api/atoms";
-import { Flex, Spinner, Text } from "@radix-ui/themes";
+import { Flex, Spinner } from "@radix-ui/themes";
 
 /**
  * MonadSankey - Monad-specific transaction waterfall visualization
