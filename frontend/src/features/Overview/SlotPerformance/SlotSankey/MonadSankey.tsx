@@ -53,10 +53,10 @@ export default function MonadSankey() {
             width={width}
             data={data}
             margin={{
-              top: 10,
-              right: isRotated ? 145 : 130,
-              bottom: 35,
-              left: 85,
+              top: 20,
+              right: isRotated ? 180 : 160,
+              bottom: 50,
+              left: 120,
             }}
             align="center"
             isInteractive={false}
@@ -68,7 +68,7 @@ export default function MonadSankey() {
             linkOpacity={1}
             enableLinkGradient
             labelPosition="outside"
-            labelPadding={16}
+            labelPadding={20}
           />
         );
       }}
