@@ -11,6 +11,7 @@ import { useSlotSearchParam } from "./useSearchParams";
 import { useEffect } from "react";
 import { selectedSlotAtom } from "./SlotPerformance/atoms";
 import TransactionBarsCard from "./SlotPerformance/TransactionBarsCard";
+import { ConsensusTracker } from "../MonadBFT";
 
 export default function Overview() {
   return (
@@ -26,6 +27,7 @@ export default function Overview() {
         <TransactionsCard />
         <ValidatorsCard />
       </div>
+      <ConsensusTracker />
       <SlotPerformance />
       <ComputeUnitsCard />
       <TransactionBarsCard />
