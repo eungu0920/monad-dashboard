@@ -260,6 +260,14 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			waterfallIn := waterfallData["in"].(map[string]interface{})
 			waterfallOut := waterfallData["out"].(map[string]interface{})
 
+			// Debug: Log waterfall data source
+			if metadata, ok := waterfallData["metadata"].(map[string]interface{}); ok {
+				if source, ok := metadata["source"].(string); ok {
+					log.Printf("🌊 Waterfall source: %s, RPC=%v, Parallel=%v",
+						source, waterfallIn["rpc"], waterfallOut["exec_parallel"])
+				}
+			}
+
 			waterfallMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "live_txn_waterfall",

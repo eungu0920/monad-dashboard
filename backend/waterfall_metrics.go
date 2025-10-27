@@ -190,10 +190,13 @@ func GenerateWaterfallFromSubscriber() map[string]interface{} {
 	promCollector := GetPrometheusCollector()
 	if promCollector != nil && promCollector.IsHealthy() {
 		promMetrics := promCollector.GetMetrics()
-		// Check if we have txpool metrics in Prometheus (use Total fields)
-		if promMetrics.InsertOwnedTxsTotal > 0 || promMetrics.InsertForwardedTxsTotal > 0 {
+		// Check if we have ACTIVE txpool metrics in Prometheus
+		// Only use Prometheus if there's actual activity (rate > 0)
+		if promMetrics.TPS60s > 0 && (promMetrics.InsertOwnedTxsRate > 0 || promMetrics.InsertForwardedTxsRate > 0) {
 			return generateWaterfallFromPrometheus(promMetrics)
 		}
+		// If TPS > 0 but insert rates are 0, fall through to estimation
+		// This happens when counters aren't updating but blocks are being produced
 	}
 
 	// Priority 2: Try IPC metrics
