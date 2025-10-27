@@ -11,14 +11,27 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// TransactionLog represents a transaction log event from monadLogs
+type TransactionLog struct {
+	BlockNumber      int64    `json:"blockNumber"`
+	TransactionHash  string   `json:"transactionHash"`
+	TransactionIndex int      `json:"transactionIndex"`
+	Address          string   `json:"address"`
+	Topics           []string `json:"topics"`
+	Data             string   `json:"data"`
+	Timestamp        int64    `json:"timestamp"`
+}
+
 // MonadSubscriber handles real-time subscriptions to Monad node
 type MonadSubscriber struct {
-	wsURL          string
-	conn           *websocket.Conn
-	subscriptionID string
+	wsURL            string
+	conn             *websocket.Conn
+	headsSubID       string // Subscription ID for monadNewHeads
+	logsSubID        string // Subscription ID for monadLogs
 
-	blockChan      chan *BlockHeader
-	errorChan      chan error
+	blockChan        chan *BlockHeader
+	logsChan         chan *TransactionLog
+	errorChan        chan error
 
 	mu             sync.RWMutex
 	latestBlock    *BlockHeader
@@ -57,6 +70,7 @@ func NewMonadSubscriber(wsURL string) *MonadSubscriber {
 	return &MonadSubscriber{
 		wsURL:           wsURL,
 		blockChan:       make(chan *BlockHeader, 100),
+		logsChan:        make(chan *TransactionLog, 1000), // Larger buffer for logs
 		errorChan:       make(chan error, 10),
 		recentBlocks:    make([]BlockTxInfo, 0, 10),
 		maxRecentBlocks: 10, // Track last 10 blocks (~4 seconds of data)
@@ -79,31 +93,57 @@ func (s *MonadSubscriber) Connect() error {
 	s.conn = conn
 	s.isConnected = true
 
-	// Subscribe to new block headers
-	subscribeMsg := map[string]interface{}{
+	// Subscribe to monadNewHeads (Monad-specific block headers with speculative execution data)
+	headsSubMsg := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "eth_subscribe",
-		"params":  []interface{}{"newHeads"},
+		"params":  []interface{}{"monadNewHeads"},
 	}
 
-	if err := conn.WriteJSON(subscribeMsg); err != nil {
-		return fmt.Errorf("failed to send subscribe message: %w", err)
+	if err := conn.WriteJSON(headsSubMsg); err != nil {
+		return fmt.Errorf("failed to send monadNewHeads subscribe message: %w", err)
 	}
 
-	// Read subscription confirmation
-	var subResponse struct {
+	// Read monadNewHeads subscription confirmation
+	var headsSubResponse struct {
 		JSONRPC string `json:"jsonrpc"`
 		ID      int    `json:"id"`
 		Result  string `json:"result"`
 	}
 
-	if err := conn.ReadJSON(&subResponse); err != nil {
-		return fmt.Errorf("failed to read subscription response: %w", err)
+	if err := conn.ReadJSON(&headsSubResponse); err != nil {
+		return fmt.Errorf("failed to read monadNewHeads subscription response: %w", err)
 	}
 
-	s.subscriptionID = subResponse.Result
-	log.Printf("Successfully subscribed to newHeads with subscription ID: %s", s.subscriptionID)
+	s.headsSubID = headsSubResponse.Result
+	log.Printf("Successfully subscribed to monadNewHeads with subscription ID: %s", s.headsSubID)
+
+	// Subscribe to monadLogs (transaction logs for flow visualization)
+	logsSubMsg := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      2,
+		"method":  "eth_subscribe",
+		"params":  []interface{}{"monadLogs", map[string]interface{}{}}, // Empty filter = all logs
+	}
+
+	if err := conn.WriteJSON(logsSubMsg); err != nil {
+		return fmt.Errorf("failed to send monadLogs subscribe message: %w", err)
+	}
+
+	// Read monadLogs subscription confirmation
+	var logsSubResponse struct {
+		JSONRPC string `json:"jsonrpc"`
+		ID      int    `json:"id"`
+		Result  string `json:"result"`
+	}
+
+	if err := conn.ReadJSON(&logsSubResponse); err != nil {
+		return fmt.Errorf("failed to read monadLogs subscription response: %w", err)
+	}
+
+	s.logsSubID = logsSubResponse.Result
+	log.Printf("Successfully subscribed to monadLogs with subscription ID: %s", s.logsSubID)
 
 	// Start listening for messages
 	go s.listen()
@@ -141,14 +181,30 @@ func (s *MonadSubscriber) listen() {
 
 			// Check if this is a subscription message
 			if method, ok := msg["method"].(string); ok && method == "eth_subscription" {
-				s.handleSubscriptionMessage(msg)
+				// Determine which subscription this is for
+				params, ok := msg["params"].(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				subID, ok := params["subscription"].(string)
+				if !ok {
+					continue
+				}
+
+				// Route to appropriate handler
+				if subID == s.headsSubID {
+					s.handleBlockMessage(msg)
+				} else if subID == s.logsSubID {
+					s.handleLogsMessage(msg)
+				}
 			}
 		}
 	}
 }
 
-// handleSubscriptionMessage processes incoming block headers
-func (s *MonadSubscriber) handleSubscriptionMessage(msg map[string]interface{}) {
+// handleBlockMessage processes incoming block headers from monadNewHeads
+func (s *MonadSubscriber) handleBlockMessage(msg map[string]interface{}) {
 	params, ok := msg["params"].(map[string]interface{})
 	if !ok {
 		return
@@ -187,6 +243,79 @@ func (s *MonadSubscriber) handleSubscriptionMessage(msg map[string]interface{}) 
 
 	log.Printf("Received new block: height=%d, hash=%s (enriching...)",
 		header.Number, header.Hash[:10])
+}
+
+// handleLogsMessage processes incoming transaction logs from monadLogs
+func (s *MonadSubscriber) handleLogsMessage(msg map[string]interface{}) {
+	params, ok := msg["params"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	result, ok := params["result"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	// Parse transaction log
+	txLog := s.parseTransactionLog(result)
+	if txLog == nil {
+		return
+	}
+
+	// Send to logs channel
+	select {
+	case s.logsChan <- txLog:
+	default:
+		// Channel full, skip this log
+		log.Printf("Logs channel full, skipping log for tx %s", txLog.TransactionHash[:10])
+	}
+}
+
+// parseTransactionLog converts JSON to TransactionLog
+func (s *MonadSubscriber) parseTransactionLog(result map[string]interface{}) *TransactionLog {
+	blockNumberStr, ok := result["blockNumber"].(string)
+	if !ok {
+		return nil
+	}
+
+	blockNumber, err := parseHexToInt64(blockNumberStr)
+	if err != nil {
+		log.Printf("Failed to parse block number in log: %v", err)
+		return nil
+	}
+
+	txHash, _ := result["transactionHash"].(string)
+	address, _ := result["address"].(string)
+	data, _ := result["data"].(string)
+
+	// Parse transaction index
+	txIndex := 0
+	if txIndexStr, ok := result["transactionIndex"].(string); ok {
+		if idx, err := parseHexToInt64(txIndexStr); err == nil {
+			txIndex = int(idx)
+		}
+	}
+
+	// Parse topics array
+	topics := []string{}
+	if topicsArr, ok := result["topics"].([]interface{}); ok {
+		for _, t := range topicsArr {
+			if topicStr, ok := t.(string); ok {
+				topics = append(topics, topicStr)
+			}
+		}
+	}
+
+	return &TransactionLog{
+		BlockNumber:      blockNumber,
+		TransactionHash:  txHash,
+		TransactionIndex: txIndex,
+		Address:          address,
+		Topics:           topics,
+		Data:             data,
+		Timestamp:        time.Now().Unix(), // Use current time as approximation
+	}
 }
 
 // enrichBlockWithTransactions fetches full block details to get transaction count
@@ -403,6 +532,11 @@ func (s *MonadSubscriber) BlockChannel() <-chan *BlockHeader {
 	return s.blockChan
 }
 
+// LogsChannel returns the channel for receiving transaction logs
+func (s *MonadSubscriber) LogsChannel() <-chan *TransactionLog {
+	return s.logsChan
+}
+
 // reconnect attempts to reconnect to the WebSocket
 func (s *MonadSubscriber) reconnect() error {
 	log.Println("Attempting to reconnect to Monad WebSocket...")
@@ -425,13 +559,24 @@ func (s *MonadSubscriber) Close() error {
 	defer s.mu.Unlock()
 
 	if s.conn != nil {
-		// Unsubscribe
-		if s.subscriptionID != "" {
+		// Unsubscribe from monadNewHeads
+		if s.headsSubID != "" {
 			unsubMsg := map[string]interface{}{
 				"jsonrpc": "2.0",
-				"id":      2,
+				"id":      3,
 				"method":  "eth_unsubscribe",
-				"params":  []string{s.subscriptionID},
+				"params":  []string{s.headsSubID},
+			}
+			s.conn.WriteJSON(unsubMsg)
+		}
+
+		// Unsubscribe from monadLogs
+		if s.logsSubID != "" {
+			unsubMsg := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      4,
+				"method":  "eth_unsubscribe",
+				"params":  []string{s.logsSubID},
 			}
 			s.conn.WriteJSON(unsubMsg)
 		}
@@ -500,7 +645,7 @@ func InitializeSubscriber(wsURL string) error {
 	return nil
 }
 
-// processSubscribedBlocks processes incoming blocks and updates metrics
+// processSubscribedBlocks processes incoming blocks, logs, and updates metrics
 func processSubscribedBlocks() {
 	for {
 		select {
@@ -508,10 +653,35 @@ func processSubscribedBlocks() {
 			if block != nil {
 				updateMetricsFromBlock(block)
 			}
+		case txLog := <-monadSubscriber.LogsChannel():
+			if txLog != nil {
+				broadcastTransactionLog(txLog)
+			}
 		case err := <-monadSubscriber.errorChan:
 			log.Printf("Subscriber error: %v", err)
 		}
 	}
+}
+
+// broadcastTransactionLog sends transaction log to all connected WebSocket clients
+func broadcastTransactionLog(txLog *TransactionLog) {
+	// Format as Firedancer protocol message
+	msg := map[string]interface{}{
+		"topic": "tx_flow",
+		"key":   "transaction_log",
+		"value": map[string]interface{}{
+			"block_number":      txLog.BlockNumber,
+			"transaction_hash":  txLog.TransactionHash,
+			"transaction_index": txLog.TransactionIndex,
+			"address":           txLog.Address,
+			"topics":            txLog.Topics,
+			"data":              txLog.Data,
+			"timestamp":         txLog.Timestamp,
+		},
+	}
+
+	// Broadcast to all connected clients (defined in main.go)
+	broadcastToAllClients(msg)
 }
 
 // updateMetricsFromBlock updates global metrics from a new block

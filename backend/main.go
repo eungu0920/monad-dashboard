@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,41 @@ var upgrader = websocket.Upgrader{
 		return true // Allow connections from any origin
 	},
 	Subprotocols: []string{"compress-zstd"},
+}
+
+// WebSocket client registry for broadcasting transaction logs
+var (
+	wsClients   = make(map[*websocket.Conn]bool)
+	wsClientsMu sync.RWMutex
+)
+
+// registerWSClient adds a WebSocket connection to the registry
+func registerWSClient(conn *websocket.Conn) {
+	wsClientsMu.Lock()
+	defer wsClientsMu.Unlock()
+	wsClients[conn] = true
+	log.Printf("WebSocket client registered. Total clients: %d", len(wsClients))
+}
+
+// unregisterWSClient removes a WebSocket connection from the registry
+func unregisterWSClient(conn *websocket.Conn) {
+	wsClientsMu.Lock()
+	defer wsClientsMu.Unlock()
+	delete(wsClients, conn)
+	log.Printf("WebSocket client unregistered. Total clients: %d", len(wsClients))
+}
+
+// broadcastToAllClients sends a message to all connected WebSocket clients
+func broadcastToAllClients(msg interface{}) {
+	wsClientsMu.RLock()
+	defer wsClientsMu.RUnlock()
+
+	for client := range wsClients {
+		if err := client.WriteJSON(msg); err != nil {
+			log.Printf("Error broadcasting to client: %v", err)
+			// Don't remove client here - it will be removed when connection closes
+		}
+	}
 }
 
 func main() {
@@ -180,6 +216,10 @@ func handleWebSocket(c *gin.Context) {
 	defer conn.Close()
 
 	log.Printf("WebSocket client connected from %s", c.Request.RemoteAddr)
+
+	// Register this client for broadcasts
+	registerWSClient(conn)
+	defer unregisterWSClient(conn)
 
 	// Send initial Firedancer protocol messages
 	if err := sendInitialSummaryMessages(conn); err != nil {
