@@ -93,19 +93,19 @@ func (s *MonadSubscriber) Connect() error {
 	s.conn = conn
 	s.isConnected = true
 
-	// Subscribe to monadNewHeads (Monad-specific block headers with speculative execution data)
+	// Subscribe to newHeads (standard Ethereum block headers)
 	headsSubMsg := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      1,
 		"method":  "eth_subscribe",
-		"params":  []interface{}{"monadNewHeads"},
+		"params":  []interface{}{"newHeads"},
 	}
 
 	if err := conn.WriteJSON(headsSubMsg); err != nil {
-		return fmt.Errorf("failed to send monadNewHeads subscribe message: %w", err)
+		return fmt.Errorf("failed to send newHeads subscribe message: %w", err)
 	}
 
-	// Read monadNewHeads subscription confirmation
+	// Read newHeads subscription confirmation
 	var headsSubResponse struct {
 		JSONRPC string `json:"jsonrpc"`
 		ID      int    `json:"id"`
@@ -113,11 +113,11 @@ func (s *MonadSubscriber) Connect() error {
 	}
 
 	if err := conn.ReadJSON(&headsSubResponse); err != nil {
-		return fmt.Errorf("failed to read monadNewHeads subscription response: %w", err)
+		return fmt.Errorf("failed to read newHeads subscription response: %w", err)
 	}
 
 	s.headsSubID = headsSubResponse.Result
-	log.Printf("Successfully subscribed to monadNewHeads with subscription ID: %s", s.headsSubID)
+	log.Printf("Successfully subscribed to newHeads with subscription ID: %s", s.headsSubID)
 
 	// Subscribe to monadLogs (transaction logs for flow visualization)
 	logsSubMsg := map[string]interface{}{
@@ -203,7 +203,7 @@ func (s *MonadSubscriber) listen() {
 	}
 }
 
-// handleBlockMessage processes incoming block headers from monadNewHeads
+// handleBlockMessage processes incoming block headers from newHeads
 func (s *MonadSubscriber) handleBlockMessage(msg map[string]interface{}) {
 	params, ok := msg["params"].(map[string]interface{})
 	if !ok {
@@ -559,7 +559,7 @@ func (s *MonadSubscriber) Close() error {
 	defer s.mu.Unlock()
 
 	if s.conn != nil {
-		// Unsubscribe from monadNewHeads
+		// Unsubscribe from newHeads
 		if s.headsSubID != "" {
 			unsubMsg := map[string]interface{}{
 				"jsonrpc": "2.0",
