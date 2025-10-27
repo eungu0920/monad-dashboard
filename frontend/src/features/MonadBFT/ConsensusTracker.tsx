@@ -27,6 +27,12 @@ export function ConsensusTracker() {
   const { current_block, finalized_block, blocks_behind, recent_blocks } =
     consensusState;
 
+  // Handle optional fields
+  const blocksBehind = blocks_behind ?? 0;
+  const currentBlock = current_block ?? 0;
+  const finalizedBlock = finalized_block ?? 0;
+  const recentBlocks = recent_blocks ?? [];
+
   return (
     <Card>
       <Flex direction="column" gap="3">
@@ -35,8 +41,8 @@ export function ConsensusTracker() {
           <Text size="4" weight="bold">
             MonadBFT Consensus
           </Text>
-          <Badge color={blocks_behind <= 2 ? "green" : "yellow"} size="2">
-            {blocks_behind} blocks behind
+          <Badge color={blocksBehind <= 2 ? "green" : "yellow"} size="2">
+            {blocksBehind} blocks behind
           </Badge>
         </Flex>
 
@@ -47,7 +53,7 @@ export function ConsensusTracker() {
               Current Block
             </Text>
             <Text size="3" weight="bold">
-              {current_block.toLocaleString()}
+              {currentBlock.toLocaleString()}
             </Text>
           </Flex>
           <Flex direction="column" gap="1">
@@ -55,7 +61,7 @@ export function ConsensusTracker() {
               Finalized Block
             </Text>
             <Text size="3" weight="bold">
-              {finalized_block.toLocaleString()}
+              {finalizedBlock.toLocaleString()}
             </Text>
           </Flex>
         </Flex>
@@ -65,7 +71,7 @@ export function ConsensusTracker() {
           <Text size="2" weight="medium">
             Recent Blocks
           </Text>
-          {recent_blocks.slice(0, 10).map((block) => (
+          {recentBlocks.slice(0, 10).map((block) => (
             <BlockProgress key={block.block_number} block={block} />
           ))}
         </Flex>
@@ -81,14 +87,19 @@ interface BlockProgressProps {
 function BlockProgress({ block }: BlockProgressProps) {
   const { block_number, phase, tx_count } = block;
 
+  // Handle optional fields with defaults
+  const blockNumber = block_number ?? 0;
+  const blockPhase = phase ?? "proposed";
+  const txCount = tx_count ?? 0;
+
   // Calculate progress percentage
-  const progressValue = phase === "proposed" ? 33 : phase === "voted" ? 66 : 100;
+  const progressValue = blockPhase === "proposed" ? 33 : blockPhase === "voted" ? 66 : 100;
 
   // Color based on phase
   const color =
-    phase === "proposed"
+    blockPhase === "proposed"
       ? "blue"
-      : phase === "voted"
+      : blockPhase === "voted"
       ? "yellow"
       : "green";
 
@@ -97,14 +108,14 @@ function BlockProgress({ block }: BlockProgressProps) {
       <Flex justify="between" align="center" mb="1">
         <Flex gap="2" align="center">
           <Text size="1" weight="medium">
-            Block #{block_number}
+            Block #{blockNumber}
           </Text>
           <Badge color={color} size="1">
-            {phase.charAt(0).toUpperCase() + phase.slice(1)}
+            {blockPhase.charAt(0).toUpperCase() + blockPhase.slice(1)}
           </Badge>
         </Flex>
         <Text size="1" color="gray">
-          {tx_count} txs
+          {txCount} txs
         </Text>
       </Flex>
       <Progress value={progressValue} color={color} />
