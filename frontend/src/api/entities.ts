@@ -168,7 +168,7 @@ export const blockConsensusStateSchema = z.object({
   voted_at: z.string().nullable().optional(),
   finalized_at: z.string().nullable().optional(),
   tx_count: z.number(),
-});
+}).partial(); // Make all fields optional for flexibility
 
 export const consensusStateMetadataSchema = z.object({
   current_block: z.number(),
@@ -178,31 +178,31 @@ export const consensusStateMetadataSchema = z.object({
   voted_blocks: z.number(),
   finalized_blocks: z.number(),
   recent_blocks: z.array(blockConsensusStateSchema),
-});
+}).partial(); // Make all fields optional for flexibility
 
 export const monadWaterfallV2Schema = z.object({
   nodes: z.array(waterfallNodeSchema),
   links: z.array(waterfallLinkSchema),
   metadata: z.object({
     source: z.string(),
-    last_updated: z.number().optional(),
-    tps: z.number().optional(),
-    pending_txs: z.number().optional(),
-    tracked_txs: z.number().optional(),
-    interval_seconds: z.number().optional(),
-    consensus_state: consensusStateMetadataSchema.optional(),
-    block_height: z.number().optional(),
-    block_hash: z.string().optional(),
-    block_txs: z.number().optional(),
-    timestamp: z.number().optional(),
-  }),
+    last_updated: z.number(),
+    tps: z.number(),
+    pending_txs: z.number(),
+    tracked_txs: z.number(),
+    interval_seconds: z.number(),
+    consensus_state: consensusStateMetadataSchema,
+    block_height: z.number(),
+    block_hash: z.string(),
+    block_txs: z.number(),
+    timestamp: z.number(),
+  }).partial().passthrough(), // Make all metadata fields optional and allow extra fields
   drops: z.object({
-    invalid_signature: z.number().optional(),
-    nonce_invalid: z.number().optional(),
-    insufficient_balance: z.number().optional(),
-    block_full: z.number().optional(),
-    fee_too_low: z.number().optional(),
-  }).optional(),
+    invalid_signature: z.number(),
+    nonce_invalid: z.number(),
+    insufficient_balance: z.number(),
+    block_full: z.number(),
+    fee_too_low: z.number(),
+  }).partial().optional(), // Make all drops optional
 });
 
 export const monadConsensusStateSchema = consensusStateMetadataSchema;
