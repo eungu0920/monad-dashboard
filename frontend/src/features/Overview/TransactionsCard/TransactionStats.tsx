@@ -19,6 +19,11 @@ export default function TransactionStats() {
         valueColor={headerColor}
         large
       />
+      <CardStat
+        label="Tx"
+        value={estimated?.tx_count?.toLocaleString() ?? "-"}
+        valueColor={headerColor}
+      />
     </Flex>
   );
 }

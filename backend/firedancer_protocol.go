@@ -245,6 +245,8 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 	defer ticker.Stop()
 
 	pingID := 0
+	lastBlockHeight := int64(0)
+	lastTPSUpdate := time.Now()
 
 	for {
 		select {
@@ -261,6 +263,11 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			metrics := getCurrentMetrics()
 			// Update with fresh consensus data
 			metrics.Consensus = *consensus
+
+			currentBlockHeight := metrics.Consensus.CurrentHeight
+			isNewBlock := currentBlockHeight != lastBlockHeight
+			timeSinceLastTPS := time.Since(lastTPSUpdate)
+			shouldUpdateTPS := timeSinceLastTPS >= 1*time.Second
 
 			// Send ping
 			pingID++
@@ -279,7 +286,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			estimatedSlotMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "estimated_slot",
-				Value: metrics.Consensus.CurrentHeight,
+				Value: currentBlockHeight,
 			}
 			if err := conn.WriteJSON(estimatedSlotMsg); err != nil {
 				log.Printf("Error sending estimated_slot: %v", err)
@@ -290,7 +297,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			rootSlotMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "root_slot",
-				Value: metrics.Consensus.CurrentHeight,
+				Value: currentBlockHeight,
 			}
 			if err := conn.WriteJSON(rootSlotMsg); err != nil {
 				log.Printf("Error sending root_slot: %v", err)
@@ -300,7 +307,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 			completedSlotMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "completed_slot",
-				Value: metrics.Consensus.CurrentHeight,
+				Value: currentBlockHeight,
 			}
 			if err := conn.WriteJSON(completedSlotMsg); err != nil {
 				log.Printf("Error sending completed_slot: %v", err)
@@ -309,13 +316,22 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 
 			// Calculate different TPS metrics from subscriber
 			var oneSecondTPS, avgTPS, instantTPS float64
+			var txCount int
 			if monadSubscriber != nil && monadSubscriber.IsConnected() {
 				oneSecondTPS = monadSubscriber.calculateOneSecondTPS()
 				avgTPS = monadSubscriber.calculateAverageTPS()
 				instantTPS = monadSubscriber.getInstantTPS()
 
-				// Add to history for charting
-				monadSubscriber.addTPSToHistory(oneSecondTPS, avgTPS, instantTPS)
+				// Get transaction count from latest block
+				if block := monadSubscriber.GetLatestBlock(); block != nil {
+					txCount = block.Transactions
+				}
+
+				// Add to history ONLY on new blocks (for chart)
+				if isNewBlock {
+					monadSubscriber.addTPSToHistory(oneSecondTPS, avgTPS, instantTPS)
+					lastBlockHeight = currentBlockHeight
+				}
 			} else {
 				// Fallback to current metrics
 				oneSecondTPS = metrics.Execution.TPS
@@ -323,23 +339,24 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				instantTPS = metrics.Execution.TPS
 			}
 
-			// Send estimated TPS with 3 different metrics
-			// total: 1-second TPS (most recent second)
-			// nonvote_success: Average TPS (smoothed over ~4 seconds)
-			// nonvote_failed: Instant TPS (per block, shows spikes)
-			estimatedTpsMsg := FiredancerMessage{
-				Topic: "summary",
-				Key:   "estimated_tps",
-				Value: map[string]interface{}{
-					"total":           oneSecondTPS,  // 1-second TPS
-					"vote":            0,
-					"nonvote_success": avgTPS,        // Average TPS
-					"nonvote_failed":  instantTPS,    // Instant TPS per block
-				},
-			}
-			if err := conn.WriteJSON(estimatedTpsMsg); err != nil {
-				log.Printf("Error sending estimated_tps: %v", err)
-				return
+			// Send estimated TPS only once per second
+			if shouldUpdateTPS {
+				estimatedTpsMsg := FiredancerMessage{
+					Topic: "summary",
+					Key:   "estimated_tps",
+					Value: map[string]interface{}{
+						"total":           oneSecondTPS,  // 1-second TPS
+						"vote":            0,
+						"nonvote_success": avgTPS,        // Average TPS
+						"nonvote_failed":  instantTPS,    // Instant TPS per block
+						"tx_count":        txCount,       // Latest block tx count
+					},
+				}
+				if err := conn.WriteJSON(estimatedTpsMsg); err != nil {
+					log.Printf("Error sending estimated_tps: %v", err)
+					return
+				}
+				lastTPSUpdate = time.Now()
 			}
 
 			// Send Monad waterfall (NEW: Monad lifecycle-aligned)
@@ -445,36 +462,39 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				return
 			}
 
-			// Send TPS history for the chart
-			// Get accumulated history from subscriber
-			var tpsHistoryData [][]float64
-			if monadSubscriber != nil && monadSubscriber.IsConnected() {
-				history := monadSubscriber.getTPSHistory()
-				// Convert [][4]float64 to [][]float64
-				tpsHistoryData = make([][]float64, len(history))
-				for i, h := range history {
-					tpsHistoryData[i] = []float64{h[0], h[1], h[2], h[3]}
+			// Send TPS history for the chart ONLY on new blocks
+			if isNewBlock {
+				var tpsHistoryData [][]float64
+				if monadSubscriber != nil && monadSubscriber.IsConnected() {
+					history := monadSubscriber.getTPSHistory()
+					// Convert [][4]float64 to [][]float64
+					tpsHistoryData = make([][]float64, len(history))
+					for i, h := range history {
+						tpsHistoryData[i] = []float64{h[0], h[1], h[2], h[3]}
+					}
+				} else {
+					// Fallback: send single point
+					tpsHistoryData = [][]float64{
+						{oneSecondTPS, 0, avgTPS, instantTPS},
+					}
 				}
-			} else {
-				// Fallback: send single point
-				tpsHistoryData = [][]float64{
-					{oneSecondTPS, 0, avgTPS, instantTPS},
+
+				tpsHistoryMsg := FiredancerMessage{
+					Topic: "summary",
+					Key:   "tps_history",
+					Value: tpsHistoryData,
+				}
+				if err := conn.WriteJSON(tpsHistoryMsg); err != nil {
+					log.Printf("Error sending tps_history: %v", err)
+					return
 				}
 			}
 
-			tpsHistoryMsg := FiredancerMessage{
-				Topic: "summary",
-				Key:   "tps_history",
-				Value: tpsHistoryData,
+			// Debug: log message count (only on new blocks)
+			if isNewBlock {
+				log.Printf("📊 New block #%d: 1s=%.2f TPS, avg=%.2f TPS, instant=%.2f TPS, txs=%d",
+					currentBlockHeight, oneSecondTPS, avgTPS, instantTPS, txCount)
 			}
-			if err := conn.WriteJSON(tpsHistoryMsg); err != nil {
-				log.Printf("Error sending tps_history: %v", err)
-				return
-			}
-
-			// Debug: log message count
-			log.Printf("Sent Firedancer updates: ping=%d, slot=%d, 1s=%.2f, avg=%.2f, instant=%.2f, history=%d",
-				pingID, metrics.Consensus.CurrentHeight, oneSecondTPS, avgTPS, instantTPS, len(tpsHistoryData))
 		}
 	}
 }

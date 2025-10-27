@@ -97,6 +97,7 @@ export const estimatedTpsSchema = z.object({
   vote: z.number(),
   nonvote_success: z.number(),
   nonvote_failed: z.number(),
+  tx_count: z.number().optional(), // Transaction count from latest block
 });
 
 export const txnWaterfallInSchema = z.object({
