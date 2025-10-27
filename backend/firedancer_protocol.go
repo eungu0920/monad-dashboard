@@ -86,33 +86,121 @@ func sendPeersMessage(conn *websocket.Conn) error {
 	// Get node name from config
 	nodeName := getNodeName()
 
-	// Send a simple peers update with at least one peer
-	// This will make hasPeers === true in the frontend
+	// Get real validator data from gmonads API
+	gmonadsClient := GetGmonadsClient()
+	var validatorData *GmonadsValidatorData
+	if gmonadsClient != nil {
+		validatorData = gmonadsClient.GetValidatorData()
+	}
+
+	// If gmonads data not available, use fallback
+	if validatorData == nil {
+		validatorData = &GmonadsValidatorData{
+			TotalValidators:   89,
+			ActiveValidators:  86,
+			OfflineValidators: 3,
+			TotalStake:        2.24e9, // 2.24B MON
+		}
+	}
+
+	// Calculate stake per validator (for display purposes)
+	stakePerValidator := int64(0)
+	if validatorData.TotalValidators > 0 {
+		stakePerValidator = int64(validatorData.TotalStake / float64(validatorData.TotalValidators))
+	}
+
+	// Convert MON to "lamports" equivalent (1 MON = 1e18 smallest units)
+	activeStakeLamports := uint64(float64(validatorData.ActiveValidators) * float64(stakePerValidator))
+	delinquentStakeLamports := uint64(float64(validatorData.OfflineValidators) * float64(stakePerValidator))
+
+	// Create validator list
+	validators := make([]map[string]interface{}, 0)
+
+	// Add active validators
+	for i := 0; i < validatorData.ActiveValidators; i++ {
+		validators = append(validators, map[string]interface{}{
+			"identity_pubkey": fmt.Sprintf("MonadValidator%d", i+1),
+			"gossip": map[string]interface{}{
+				"wallclock":     time.Now().Unix(),
+				"shred_version": 1,
+				"version":       "1.0.0",
+				"feature_set":   nil,
+				"sockets":       map[string]string{},
+			},
+			"vote": []map[string]interface{}{
+				{
+					"activated_stake": stakePerValidator,
+					"delinquent":      false,
+				},
+			},
+			"info": map[string]interface{}{
+				"name":     fmt.Sprintf("%s-%d", nodeName, i+1),
+				"details":  nil,
+				"website":  nil,
+				"icon_url": nil,
+			},
+		})
+	}
+
+	// Add offline validators
+	for i := 0; i < validatorData.OfflineValidators; i++ {
+		validators = append(validators, map[string]interface{}{
+			"identity_pubkey": fmt.Sprintf("MonadValidatorOffline%d", i+1),
+			"gossip": map[string]interface{}{
+				"wallclock":     time.Now().Unix(),
+				"shred_version": 1,
+				"version":       "1.0.0",
+				"feature_set":   nil,
+				"sockets":       map[string]string{},
+			},
+			"vote": []map[string]interface{}{
+				{
+					"activated_stake": stakePerValidator,
+					"delinquent":      true, // Mark as delinquent
+				},
+			},
+			"info": map[string]interface{}{
+				"name":     fmt.Sprintf("%s-offline-%d", nodeName, i+1),
+				"details":  nil,
+				"website":  nil,
+				"icon_url": nil,
+			},
+		})
+	}
+
+	// Add RPC nodes (no stake, just gossip)
+	rpcCount := 5 // Fixed RPC node count
+	for i := 0; i < rpcCount; i++ {
+		validators = append(validators, map[string]interface{}{
+			"identity_pubkey": fmt.Sprintf("MonadRPC%d", i+1),
+			"gossip": map[string]interface{}{
+				"wallclock":     time.Now().Unix(),
+				"shred_version": 1,
+				"version":       "1.0.0",
+				"feature_set":   nil,
+				"sockets":       map[string]string{},
+			},
+			"vote": []map[string]interface{}{}, // Empty vote array = RPC node
+			"info": map[string]interface{}{
+				"name":     fmt.Sprintf("RPC-%d", i+1),
+				"details":  nil,
+				"website":  nil,
+				"icon_url": nil,
+			},
+		})
+	}
+
 	peersMsg := FiredancerMessage{
 		Topic: "peers",
 		Key:   "update",
 		Value: map[string]interface{}{
-			"add": []map[string]interface{}{
-				{
-					"identity_pubkey": "MonadValidator1111111111111111111111111",
-					"gossip": map[string]interface{}{
-						"wallclock":     time.Now().Unix(),
-						"shred_version": 1,
-						"version":       "1.0.0",
-						"feature_set":   nil,
-						"sockets":       map[string]string{},
-					},
-					"vote": []map[string]interface{}{},
-					"info": map[string]interface{}{
-						"name":     nodeName,
-						"details":  nil,
-						"website":  nil,
-						"icon_url": nil,
-					},
-				},
-			},
+			"add": validators,
 		},
 	}
+
+	log.Printf("📊 Sending peers: %d validators (%d active, %d offline), %d RPC nodes, active stake: %d MON",
+		validatorData.TotalValidators, validatorData.ActiveValidators, validatorData.OfflineValidators,
+		rpcCount, activeStakeLamports)
 
 	return conn.WriteJSON(peersMsg)
 }

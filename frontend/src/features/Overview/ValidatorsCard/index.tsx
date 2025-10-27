@@ -34,10 +34,10 @@ export default function ValidatorsCard() {
                 large
               />
               <CardStat
-                label="Non-delinquent Stake"
+                label="Active Stake"
                 value={activeLabel}
                 valueColor={nonDelinquentColor}
-                appendValue="SOL"
+                appendValue="MON"
                 large
               />
             </div>
@@ -48,10 +48,10 @@ export default function ValidatorsCard() {
                 valueColor={headerColor}
               />
               <CardStat
-                label="Delinquent Stake"
+                label="Inactive Stake"
                 value={delinquentLabel}
                 valueColor={failureColor}
-                appendValue="SOL"
+                appendValue="MON"
               />
             </div>
           </Flex>
