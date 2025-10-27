@@ -25,10 +25,9 @@ export default function Chart() {
   const tpsData = useAtomValue(tpsDataAtom);
   const sizeRefs = useRef<{ height: number; width: number }>();
 
-  // Use both Avg TPS and Tx Count for max scale
+  // Calculate separate max values for independent scaling
   const maxTotalTps = Math.max(...tpsData.map((d) => d?.nonvote_success ?? 0));
   const maxTxCount = Math.max(...tpsData.map((d) => d?.tx_count ?? 0));
-  const maxValue = Math.max(maxTotalTps, maxTxCount);
 
   const scaledPaths = useMemo(() => {
     if (!sizeRefs.current) return;
@@ -40,19 +39,20 @@ export default function Chart() {
 
     // Add padding and use full height for better visualization
     const padding = 15;
-    const yRatio = (height - padding * 2) / (maxValue || 1);
+    const tpsYRatio = (height - padding * 2) / (maxTotalTps || 1);
+    const txYRatio = (height - padding * 2) / (maxTxCount || 1);
 
     const points = tpsData
       .map((d, i) => {
         if (d === undefined) return;
 
-        // Calculate both TPS and Tx count
-        const tpsValue = d.nonvote_success * yRatio;
-        const txValue = (d.tx_count ?? 0) * yRatio;
+        // Calculate both TPS and Tx count with independent scaling
+        const tpsValue = d.nonvote_success * tpsYRatio;
+        const txValue = (d.tx_count ?? 0) * txYRatio;
         return {
           x: i * xRatio,
-          avgY: height - padding - tpsValue, // Avg TPS (green)
-          txY: height - padding - txValue,   // Tx count (blue)
+          avgY: height - padding - tpsValue, // Avg TPS (green) - independent scale
+          txY: height - padding - txValue,   // Tx count (blue) - independent scale
         };
       })
       .filter(isDefined);
@@ -70,8 +70,10 @@ export default function Chart() {
         height,
       ),
       totalTpsY: maxTotalY,
+      maxTotalTps,
+      maxTxCount,
     };
-  }, [maxValue, tpsData]);
+  }, [maxTotalTps, maxTxCount, tpsData]);
 
   return (
     <>
@@ -115,14 +117,26 @@ export default function Chart() {
                       strokeDasharray="4"
                       stroke="rgba(255, 255, 255, 0.30)"
                     />
+                    {/* TPS max label (left, green) */}
                     <text
                       x="0"
                       y={scaledPaths.totalTpsY - 3}
-                      fill={regularTextColor}
+                      fill={transactionNonVotePathColor}
                       fontSize="8"
                       fontFamily="Inter Tight"
                     >
-                      {maxValue.toLocaleString()}
+                      {scaledPaths.maxTotalTps.toLocaleString()} TPS
+                    </text>
+                    {/* Tx max label (right, blue) */}
+                    <text
+                      x={width - 40}
+                      y={scaledPaths.totalTpsY - 3}
+                      fill={transactionTxCountPathColor}
+                      fontSize="8"
+                      fontFamily="Inter Tight"
+                      textAnchor="end"
+                    >
+                      {scaledPaths.maxTxCount.toLocaleString()} Tx
                     </text>
                   </>
                 )}
