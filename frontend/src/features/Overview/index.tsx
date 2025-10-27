@@ -12,6 +12,7 @@ import { useEffect } from "react";
 import { selectedSlotAtom } from "./SlotPerformance/atoms";
 import TransactionBarsCard from "./SlotPerformance/TransactionBarsCard";
 import { ConsensusTracker } from "../MonadBFT";
+import TransactionFlowCard from "./TransactionFlow/TransactionFlowCard";
 
 export default function Overview() {
   return (
@@ -28,6 +29,7 @@ export default function Overview() {
         <ValidatorsCard />
       </div>
       <ConsensusTracker />
+      <TransactionFlowCard />
       <SlotPerformance />
       <ComputeUnitsCard />
       <TransactionBarsCard />

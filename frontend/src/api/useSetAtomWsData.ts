@@ -44,6 +44,8 @@ import {
   skipRateAtom,
   currentSlotAtom,
 } from "../atoms";
+import { transactionLogsAtom } from "../features/Overview/TransactionFlow/atoms";
+import type { TransactionLogData } from "../features/Overview/TransactionFlow/atoms";
 import type {
   EstimatedSlotDuration,
   EstimatedTps,
@@ -156,6 +158,10 @@ export function useSetAtomWsData() {
   );
 
   const setMonadConsensusState = useSetAtom(monadConsensusStateAtom);
+
+  // Transaction Flow
+  const setTransactionLogs = useSetAtom(transactionLogsAtom);
+  const MAX_LOGS = 200;
 
   const handleSlotUpdate = (value: SlotResponse) => {
     setSlotStatus(value.publish.slot, value.publish.level);
@@ -320,6 +326,28 @@ export function useSetAtomWsData() {
             setBlockEngine(value);
             break;
           }
+        }
+      } else if (topic === "tx_flow") {
+        // Handle transaction flow logs from monadLogs subscription
+        const parsed = msg as { topic: string; key: string; value: any };
+        if (parsed.key === "transaction_log" && parsed.value) {
+          const log: TransactionLogData = {
+            blockNumber: parsed.value.block_number,
+            transactionHash: parsed.value.transaction_hash,
+            transactionIndex: parsed.value.transaction_index,
+            address: parsed.value.address,
+            topics: parsed.value.topics || [],
+            data: parsed.value.data || "",
+            timestamp: parsed.value.timestamp,
+            status: "success", // Assume success for now (logs are only emitted on success)
+          };
+
+          setTransactionLogs((prev) => {
+            // Add new log at the beginning (newest first)
+            const updated = [log, ...prev];
+            // Keep only the most recent MAX_LOGS
+            return updated.slice(0, MAX_LOGS);
+          });
         }
       } else {
         console.debug(msg);
