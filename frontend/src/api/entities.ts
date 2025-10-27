@@ -356,7 +356,7 @@ export const skipRateSchema = z.object({
 export const summarySchema = z.discriminatedUnion("key", [
   summaryTopicSchema.extend({
     key: z.literal("ping"),
-    value: z.null(),
+    value: z.null().optional(),
     id: z.number(),
   }),
   summaryTopicSchema.extend({

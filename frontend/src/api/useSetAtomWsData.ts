@@ -329,6 +329,7 @@ export function useSetAtomWsData() {
         }
       } else if (topic === "tx_flow") {
         // Handle transaction flow logs from monadLogs subscription
+        console.log("[TX_FLOW] Received tx_flow message:", msg);
         const parsed = msg as {
           topic: string;
           key: string;
@@ -354,6 +355,7 @@ export function useSetAtomWsData() {
             status: "success", // Assume success for now (logs are only emitted on success)
           };
 
+          console.log("[TX_FLOW] Adding transaction log:", log);
           setTransactionLogs((prev) => {
             // Add new log at the beginning (newest first)
             const updated = [log, ...prev];
