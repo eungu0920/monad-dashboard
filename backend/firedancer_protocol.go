@@ -322,8 +322,10 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				avgTPS = monadSubscriber.calculateAverageTPS()
 				instantTPS = monadSubscriber.getInstantTPS()
 
-				// Use 1-second transaction count (same as oneSecondTPS logic)
-				txCount = int(oneSecondTPS)
+				// Get transaction count from latest block
+				if block := monadSubscriber.GetLatestBlock(); block != nil {
+					txCount = block.Transactions
+				}
 
 				// Add to history ONLY on new blocks (for chart)
 				if isNewBlock {
@@ -335,7 +337,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				oneSecondTPS = metrics.Execution.TPS
 				avgTPS = metrics.Execution.TPS
 				instantTPS = metrics.Execution.TPS
-				txCount = int(oneSecondTPS)
+				txCount = 0
 			}
 
 			// Send estimated TPS only once per second
