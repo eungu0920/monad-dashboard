@@ -1,6 +1,6 @@
 import { Flex } from "@radix-ui/themes";
 import CardHeader from "../../../components/CardHeader";
-import SlotSankey from "./SlotSankey";
+import MonadSankey from "./SlotSankey/MonadSankey";
 import TilesPerformance from "./TilesPerformance";
 import Card from "../../../components/Card";
 import SlotSelector from "./SlotSelector";
@@ -18,7 +18,7 @@ export default function SlotPerformance() {
         className={styles.slotPerformanceContainer}
       >
         <Flex gap="3">
-          <CardHeader text="TPU Waterfall" />
+          <CardHeader text="Transaction Waterfall" />
           <LiveSankeyIndicator />
         </Flex>
         <SlotSelector />
@@ -35,7 +35,7 @@ function SankeyContainer() {
       <ResetLive />
       <SankeyControls />
       <div className={styles.slotSankeyContainer}>
-        <SlotSankey />
+        <MonadSankey />
       </div>
     </div>
   );
