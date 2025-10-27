@@ -87,37 +87,27 @@ func sendPeersMessage(conn *websocket.Conn) error {
 	// Get node name from config
 	nodeName := getNodeName()
 
-	// Get real validator data from gmonads API
-	gmonadsClient := GetGmonadsClient()
-	var validatorData *GmonadsValidatorData
-	if gmonadsClient != nil {
-		validatorData = gmonadsClient.GetValidatorData()
-	}
-
-	// If gmonads data not available, use fallback
-	if validatorData == nil {
-		validatorData = &GmonadsValidatorData{
-			TotalValidators:   89,
-			ActiveValidators:  86,
-			OfflineValidators: 3,
-			TotalStake:        2.24e9, // 2.24B MON
-		}
-	}
+	// Fixed validator data for Monad testnet
+	// These values can be updated manually as needed
+	totalValidators := 89
+	activeValidators := 86
+	offlineValidators := 3
+	totalStake := 2.24e9 // 2.24B MON
 
 	// Calculate stake per validator (for display purposes)
 	stakePerValidator := int64(0)
-	if validatorData.TotalValidators > 0 {
-		stakePerValidator = int64(validatorData.TotalStake / float64(validatorData.TotalValidators))
+	if totalValidators > 0 {
+		stakePerValidator = int64(totalStake / float64(totalValidators))
 	}
 
 	// Convert MON to "lamports" equivalent (1 MON = 1e18 smallest units)
-	activeStakeLamports := uint64(float64(validatorData.ActiveValidators) * float64(stakePerValidator))
+	activeStakeLamports := uint64(float64(activeValidators) * float64(stakePerValidator))
 
 	// Create validator list
 	validators := make([]map[string]interface{}, 0)
 
 	// Add active validators
-	for i := 0; i < validatorData.ActiveValidators; i++ {
+	for i := 0; i < activeValidators; i++ {
 		validators = append(validators, map[string]interface{}{
 			"identity_pubkey": fmt.Sprintf("MonadValidator%d", i+1),
 			"gossip": map[string]interface{}{
@@ -143,7 +133,7 @@ func sendPeersMessage(conn *websocket.Conn) error {
 	}
 
 	// Add offline validators
-	for i := 0; i < validatorData.OfflineValidators; i++ {
+	for i := 0; i < offlineValidators; i++ {
 		validators = append(validators, map[string]interface{}{
 			"identity_pubkey": fmt.Sprintf("MonadValidatorOffline%d", i+1),
 			"gossip": map[string]interface{}{
@@ -199,7 +189,7 @@ func sendPeersMessage(conn *websocket.Conn) error {
 	}
 
 	log.Printf("📊 Sending peers: %d validators (%d active, %d offline), %d RPC nodes, active stake: %d MON",
-		validatorData.TotalValidators, validatorData.ActiveValidators, validatorData.OfflineValidators,
+		totalValidators, activeValidators, offlineValidators,
 		rpcCount, activeStakeLamports)
 
 	return conn.WriteJSON(peersMsg)

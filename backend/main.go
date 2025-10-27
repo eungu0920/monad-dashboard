@@ -132,19 +132,6 @@ func main() {
 		log.Printf("✅ IPC metrics collector initialized - using real Monad metrics")
 	}
 
-	// Initialize gmonads API client for validator data
-	network := os.Getenv("MONAD_NETWORK")
-	if network == "" {
-		network = "testnet" // Default to testnet
-	}
-	log.Printf("Initializing gmonads API client for network: %s...", network)
-	if err := InitializeGmonadsClient(network); err != nil {
-		log.Printf("⚠️  Gmonads API client initialization failed: %v", err)
-		log.Printf("Using fallback validator data")
-	} else {
-		log.Printf("✅ Gmonads API client initialized")
-	}
-
 	// Try to initialize real-time WebSocket subscription
 	wsURL := "ws://127.0.0.1:8081"
 	log.Printf("Attempting to connect to Monad WebSocket at %s...", wsURL)
