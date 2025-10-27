@@ -358,6 +358,16 @@ func generateMonadWaterfallFromPrometheus(metrics *PrometheusMetrics) map[string
 		})
 	}
 
+	// Get latest block for block height
+	var blockHeight int64
+	var blockHash string
+	if monadSubscriber != nil && monadSubscriber.IsConnected() {
+		if block := monadSubscriber.GetLatestBlock(); block != nil {
+			blockHeight = block.Number
+			blockHash = block.Hash
+		}
+	}
+
 	return map[string]interface{}{
 		"nodes": nodes,
 		"links": links,
@@ -369,6 +379,12 @@ func generateMonadWaterfallFromPrometheus(metrics *PrometheusMetrics) map[string
 			"tracked_txs":       int64(metrics.TrackedTxs),
 			"interval_seconds":  interval,
 			"consensus_state":   consensusState,
+			// Add fields for MonadMetrics component
+			"rpc_submit":        rpcReceived,
+			"p2p_gossip":        p2pReceived,
+			"blocks_committed":  blockHeight,
+			"block_height":      blockHeight,
+			"block_hash":        blockHash,
 		},
 		"drops": map[string]interface{}{
 			"invalid_signature":     invalidSig,
