@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -111,7 +112,6 @@ func sendPeersMessage(conn *websocket.Conn) error {
 
 	// Convert MON to "lamports" equivalent (1 MON = 1e18 smallest units)
 	activeStakeLamports := uint64(float64(validatorData.ActiveValidators) * float64(stakePerValidator))
-	delinquentStakeLamports := uint64(float64(validatorData.OfflineValidators) * float64(stakePerValidator))
 
 	// Create validator list
 	validators := make([]map[string]interface{}, 0)
