@@ -147,6 +147,66 @@ export const liveTxnWaterfallSchema = z.object({
   waterfall: txnWaterfallSchema,
 });
 
+// Monad Waterfall V2: Nodes/Links structure for Sankey diagram
+export const waterfallNodeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  color: z.string().optional(),
+});
+
+export const waterfallLinkSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+  value: z.number(),
+});
+
+export const blockConsensusStateSchema = z.object({
+  block_number: z.number(),
+  block_hash: z.string(),
+  phase: z.enum(["proposed", "voted", "finalized"]),
+  proposed_at: z.string(),
+  voted_at: z.string().nullable().optional(),
+  finalized_at: z.string().nullable().optional(),
+  tx_count: z.number(),
+});
+
+export const consensusStateMetadataSchema = z.object({
+  current_block: z.number(),
+  finalized_block: z.number(),
+  blocks_behind: z.number(),
+  proposed_blocks: z.number(),
+  voted_blocks: z.number(),
+  finalized_blocks: z.number(),
+  recent_blocks: z.array(blockConsensusStateSchema),
+});
+
+export const monadWaterfallV2Schema = z.object({
+  nodes: z.array(waterfallNodeSchema),
+  links: z.array(waterfallLinkSchema),
+  metadata: z.object({
+    source: z.string(),
+    last_updated: z.number().optional(),
+    tps: z.number().optional(),
+    pending_txs: z.number().optional(),
+    tracked_txs: z.number().optional(),
+    interval_seconds: z.number().optional(),
+    consensus_state: consensusStateMetadataSchema.optional(),
+    block_height: z.number().optional(),
+    block_hash: z.string().optional(),
+    block_txs: z.number().optional(),
+    timestamp: z.number().optional(),
+  }),
+  drops: z.object({
+    invalid_signature: z.number().optional(),
+    nonce_invalid: z.number().optional(),
+    insufficient_balance: z.number().optional(),
+    block_full: z.number().optional(),
+    fee_too_low: z.number().optional(),
+  }).optional(),
+});
+
+export const monadConsensusStateSchema = consensusStateMetadataSchema;
+
 export const tilePrimaryMetricSchema = z.object({
   net_in: z.number(),
   quic: z.number(),
@@ -388,6 +448,16 @@ export const summarySchema = z.discriminatedUnion("key", [
   summaryTopicSchema.extend({
     key: z.literal("skip_rate"),
     value: skipRateSchema,
+  }),
+  // Monad-specific: New waterfall v2 with nodes/links structure
+  summaryTopicSchema.extend({
+    key: z.literal("monad_waterfall_v2"),
+    value: monadWaterfallV2Schema,
+  }),
+  // Monad-specific: Consensus state tracking
+  summaryTopicSchema.extend({
+    key: z.literal("monad_consensus_state"),
+    value: monadConsensusStateSchema,
   }),
 ]);
 

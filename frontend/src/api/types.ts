@@ -40,6 +40,12 @@ import type {
   slotTransactionsSchema,
   voteBalanceSchema,
   scheduleStrategySchema,
+  monadWaterfallV2Schema,
+  monadConsensusStateSchema,
+  waterfallNodeSchema,
+  waterfallLinkSchema,
+  blockConsensusStateSchema,
+  consensusStateMetadataSchema,
 } from "./entities";
 
 export type Client = z.infer<typeof clientSchema>;
@@ -93,6 +99,14 @@ export type TilePrimaryMetric = z.infer<typeof tilePrimaryMetricSchema>;
 export type TxnWaterfallIn = z.infer<typeof txnWaterfallInSchema>;
 export type TxnWaterfallOut = z.infer<typeof txnWaterfallOutSchema>;
 export type TxnWaterfall = z.infer<typeof txnWaterfallSchema>;
+
+// Monad-specific types
+export type WaterfallNode = z.infer<typeof waterfallNodeSchema>;
+export type WaterfallLink = z.infer<typeof waterfallLinkSchema>;
+export type BlockConsensusState = z.infer<typeof blockConsensusStateSchema>;
+export type ConsensusStateMetadata = z.infer<typeof consensusStateMetadataSchema>;
+export type MonadWaterfallV2 = z.infer<typeof monadWaterfallV2Schema>;
+export type MonadConsensusState = z.infer<typeof monadConsensusStateSchema>;
 
 export type TileType = z.infer<typeof tileTypeSchema>;
 

@@ -20,6 +20,8 @@ import {
   voteStateAtom,
   voteBalanceAtom,
   scheduleStrategyAtom,
+  monadWaterfallV2Atom,
+  monadConsensusStateAtom,
 } from "./atoms";
 import {
   blockEngineSchema,
@@ -48,6 +50,8 @@ import type {
   LiveTilePrimaryMetric,
   LiveTxnWaterfall,
   SlotResponse,
+  MonadWaterfallV2,
+  MonadConsensusState,
 } from "./types";
 import { useThrottledCallback } from "use-debounce";
 import { useInterval } from "react-use";
@@ -142,6 +146,17 @@ export function useSetAtomWsData() {
   const removePeers = useSetAtom(removePeersAtom);
 
   const setBlockEngine = useSetAtom(blockEngineAtom);
+
+  // Monad-specific atoms
+  const setMonadWaterfallV2 = useSetAtom(monadWaterfallV2Atom);
+  const setDbMonadWaterfallV2 = useThrottledCallback(
+    (value?: MonadWaterfallV2) => {
+      setMonadWaterfallV2(value);
+    },
+    waterfallDebounceMs,
+  );
+
+  const setMonadConsensusState = useSetAtom(monadConsensusStateAtom);
 
   const handleSlotUpdate = (value: SlotResponse) => {
     setSlotStatus(value.publish.slot, value.publish.level);
@@ -255,6 +270,16 @@ export function useSetAtomWsData() {
             if (typeof value === "number") {
               setCurrentSlot(value);
             }
+            break;
+          }
+          case "monad_waterfall_v2": {
+            // New Monad waterfall with nodes/links structure
+            setDbMonadWaterfallV2(value);
+            break;
+          }
+          case "monad_consensus_state": {
+            // MonadBFT consensus state tracking
+            setMonadConsensusState(value);
             break;
           }
           case "optimistically_confirmed_slot":

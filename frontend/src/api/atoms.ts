@@ -23,6 +23,8 @@ import type {
   BlockEngineUpdate,
   VoteBalance,
   ScheduleStrategy,
+  MonadWaterfallV2,
+  MonadConsensusState,
 } from "./types";
 import { rafAtom } from "../atomUtils";
 
@@ -85,3 +87,12 @@ export const voteDistanceAtom = atom<VoteDistance | undefined>(undefined);
 export const skippedSlotsAtom = atom<SkippedSlots | undefined>(undefined);
 
 export const blockEngineAtom = atom<BlockEngineUpdate | undefined>(undefined);
+
+// Monad-specific atoms
+export const monadWaterfallV2Atom = rafAtom<MonadWaterfallV2 | undefined>(
+  undefined,
+);
+
+export const monadConsensusStateAtom = atom<MonadConsensusState | undefined>(
+  undefined,
+);
