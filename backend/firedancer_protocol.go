@@ -119,7 +119,12 @@ func sendPeersMessage(conn *websocket.Conn) error {
 			},
 			"vote": []map[string]interface{}{
 				{
+					"vote_account":    fmt.Sprintf("MonadVote%d", i+1),
 					"activated_stake": stakePerValidator,
+					"last_vote":       nil,
+					"root_slot":       nil,
+					"epoch_credits":   0,
+					"commission":      0,
 					"delinquent":      false,
 				},
 			},
@@ -145,7 +150,12 @@ func sendPeersMessage(conn *websocket.Conn) error {
 			},
 			"vote": []map[string]interface{}{
 				{
+					"vote_account":    fmt.Sprintf("MonadVoteOffline%d", i+1),
 					"activated_stake": stakePerValidator,
+					"last_vote":       nil,
+					"root_slot":       nil,
+					"epoch_credits":   0,
+					"commission":      0,
 					"delinquent":      true, // Mark as delinquent
 				},
 			},
