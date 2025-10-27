@@ -46,13 +46,13 @@ export default function Chart() {
 
     const points = tpsData
       .map((d, i) => {
-        if (d === undefined) return;
+        if (d === undefined) return undefined;
 
         // Calculate both TPS and Tx count with independent scaling
         const tpsValue = d.nonvote_success * tpsYRatio;
         const txValue = (d.tx_count ?? 0) * txYRatio;
         return {
-          x: i * xRatio,
+          x: i * xRatio, // Keep original index for correct x position
           avgY: height - padding - tpsValue, // Avg TPS (green) - independent scale
           txY: height - padding - txValue,   // Tx count (blue) - independent scale
         };

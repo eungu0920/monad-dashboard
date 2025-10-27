@@ -340,8 +340,8 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				txCount = 0
 			}
 
-			// Send estimated TPS only once per second
-			if shouldUpdateTPS {
+			// Send estimated TPS on every new block (so tx_count updates per block)
+			if isNewBlock || shouldUpdateTPS {
 				estimatedTpsMsg := FiredancerMessage{
 					Topic: "summary",
 					Key:   "estimated_tps",
@@ -357,7 +357,9 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 					log.Printf("Error sending estimated_tps: %v", err)
 					return
 				}
-				lastTPSUpdate = time.Now()
+				if shouldUpdateTPS {
+					lastTPSUpdate = time.Now()
+				}
 			}
 
 			// Send Monad waterfall (NEW: Monad lifecycle-aligned)
