@@ -329,7 +329,19 @@ export function useSetAtomWsData() {
         }
       } else if (topic === "tx_flow") {
         // Handle transaction flow logs from monadLogs subscription
-        const parsed = msg as { topic: string; key: string; value: any };
+        const parsed = msg as {
+          topic: string;
+          key: string;
+          value: {
+            block_number: number;
+            transaction_hash: string;
+            transaction_index: number;
+            address: string;
+            topics: string[];
+            data: string;
+            timestamp: number;
+          };
+        };
         if (parsed.key === "transaction_log" && parsed.value) {
           const log: TransactionLogData = {
             blockNumber: parsed.value.block_number,

@@ -5,7 +5,6 @@ import { useAtomValue } from "jotai";
 import { tpsDataAtom } from "./atoms";
 import { maxTransactionChartPoints } from "./consts";
 import {
-  regularTextColor,
   transactionNonVotePathColor,
   transactionTxCountPathColor,
 } from "../../../colors";
