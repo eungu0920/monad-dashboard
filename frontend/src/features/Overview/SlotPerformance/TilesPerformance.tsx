@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import type { TileType } from "../../../api/types";
 import { tileTypeSchema } from "../../../api/entities";
 import { useSlotQueryResponseDetailed } from "../../../hooks/useSlotQuery";
+import { getMonadTileName } from "./tileNameMapping";
 
 export default function TilesPerformance() {
   const liveTileTimers = useAtomValue(liveTileTimerfallAtom);
@@ -85,7 +86,7 @@ export default function TilesPerformance() {
   return (
     <div className={styles.container}>
       <TileCard
-        header={netType}
+        header={getMonadTileName(netType)}
         subHeader="(in)"
         tileCount={tileCounts[netType]}
         liveIdlePerTile={groupedLiveIdlePerTile?.[netType]}
@@ -94,7 +95,7 @@ export default function TilesPerformance() {
         metricType="net_in"
       />
       <TileCard
-        header="QUIC"
+        header={getMonadTileName("quic")}
         tileCount={tileCounts["quic"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["quic"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["quic"]}
@@ -103,7 +104,7 @@ export default function TilesPerformance() {
       />
       {"bundle" in tileCounts && (
         <TileCard
-          header="bundle"
+          header={getMonadTileName("bundle")}
           tileCount={tileCounts["bundle"]}
           liveIdlePerTile={groupedLiveIdlePerTile?.["bundle"]}
           queryIdlePerTile={showLive ? undefined : queryIdleData?.["bundle"]}
@@ -119,7 +120,7 @@ export default function TilesPerformance() {
         />
       )}
       <TileCard
-        header="verify"
+        header={getMonadTileName("verify")}
         tileCount={tileCounts["verify"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["verify"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["verify"]}
@@ -127,7 +128,7 @@ export default function TilesPerformance() {
         metricType="verify"
       />
       <TileCard
-        header="dedup"
+        header={getMonadTileName("dedup")}
         tileCount={tileCounts["dedup"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["dedup"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["dedup"]}
@@ -135,14 +136,14 @@ export default function TilesPerformance() {
         metricType="dedup"
       />
       <TileCard
-        header="resolv"
+        header={getMonadTileName("resolv")}
         tileCount={tileCounts["resolv"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["resolv"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["resolv"]}
         statLabel="Resolv"
       />
       <TileCard
-        header="pack"
+        header={getMonadTileName("pack")}
         tileCount={tileCounts["pack"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["pack"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["pack"]}
@@ -150,7 +151,7 @@ export default function TilesPerformance() {
         metricType="pack"
       />
       <TileCard
-        header="bank"
+        header={getMonadTileName("bank")}
         tileCount={tileCounts["bank"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["bank"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["bank"]}
@@ -158,7 +159,7 @@ export default function TilesPerformance() {
         metricType="bank"
       />
       <TileCard
-        header="poh"
+        header={getMonadTileName("poh")}
         tileCount={tileCounts["poh"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["poh"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["poh"]}
@@ -166,15 +167,15 @@ export default function TilesPerformance() {
         // metricType="poh"
       />
       <TileCard
-        header="shred"
+        header={getMonadTileName("shred")}
         tileCount={tileCounts["shred"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["shred"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["shred"]}
-        statLabel="Shreds"
+        statLabel="Blocks"
         // metricType="shred"
       />
       <TileCard
-        header="store"
+        header={getMonadTileName("store")}
         tileCount={tileCounts["store"]}
         liveIdlePerTile={groupedLiveIdlePerTile?.["store"]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.["store"]}
@@ -182,12 +183,12 @@ export default function TilesPerformance() {
         // metricType="store"
       />
       <TileCard
-        header={netType}
+        header={getMonadTileName(netType)}
         subHeader="(out)"
         tileCount={tileCounts[netType]}
         liveIdlePerTile={groupedLiveIdlePerTile?.[netType]}
         queryIdlePerTile={showLive ? undefined : queryIdleData?.[netType]}
-        statLabel="Egress" // mbs
+        statLabel="Egress"
         metricType="net_out"
       />
     </div>

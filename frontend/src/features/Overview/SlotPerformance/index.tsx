@@ -1,6 +1,7 @@
 import { Flex } from "@radix-ui/themes";
 import CardHeader from "../../../components/CardHeader";
 import MonadSankey from "./SlotSankey/MonadSankey";
+import TilesPerformance from "./TilesPerformance";
 import Card from "../../../components/Card";
 import SlotSelector from "./SlotSelector";
 import SankeyControls from "./SankeyControls";
@@ -22,7 +23,7 @@ export default function SlotPerformance() {
         </Flex>
         <SlotSelector />
         <SankeyContainer />
-        {/* TilesPerformance removed - not applicable to Monad */}
+        <TilesPerformance />
       </Flex>
     </Card>
   );
