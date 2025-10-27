@@ -329,7 +329,7 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 
 				// Add to history ONLY on new blocks (for chart)
 				if isNewBlock {
-					monadSubscriber.addTPSToHistory(oneSecondTPS, avgTPS, instantTPS)
+					monadSubscriber.addTPSToHistory(oneSecondTPS, avgTPS, instantTPS, txCount)
 					lastBlockHeight = currentBlockHeight
 				}
 			} else {
@@ -467,15 +467,15 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				var tpsHistoryData [][]float64
 				if monadSubscriber != nil && monadSubscriber.IsConnected() {
 					history := monadSubscriber.getTPSHistory()
-					// Convert [][4]float64 to [][]float64
+					// Convert [][5]float64 to [][]float64
 					tpsHistoryData = make([][]float64, len(history))
 					for i, h := range history {
-						tpsHistoryData[i] = []float64{h[0], h[1], h[2], h[3]}
+						tpsHistoryData[i] = []float64{h[0], h[1], h[2], h[3], h[4]}
 					}
 				} else {
 					// Fallback: send single point
 					tpsHistoryData = [][]float64{
-						{oneSecondTPS, 0, avgTPS, instantTPS},
+						{oneSecondTPS, 0, avgTPS, instantTPS, float64(txCount)},
 					}
 				}
 

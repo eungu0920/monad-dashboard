@@ -51,7 +51,8 @@ export const nonDelinquentChartColor = "#363A63";
 export const totalValidatorsColor = "#20788C";
 export const progressBackgroundColor = "#167B91";
 
-export const transactionNonVotePathColor = "#2A7EDF"; // Blue for Monad TPS chart
+export const transactionNonVotePathColor = "#006851"; // Green for Average TPS
+export const transactionTxCountPathColor = "#2A7EDF"; // Blue for Tx count
 export const transactionVotePathColor = "#19307C";
 export const transactionFailedPathColor = "#743F4D";
 export const transactionAxisTextColor = "#919191";

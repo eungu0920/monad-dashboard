@@ -21,11 +21,12 @@ export default function useUpdateTransactions() {
     const tps = [
       ...empty,
       ...tpsHistory.map<EstimatedTps>(
-        ([total, vote, nonvote_success, nonvote_failed]) => ({
+        ([total, vote, nonvote_success, nonvote_failed, tx_count]) => ({
           total,
           vote,
           nonvote_success,
           nonvote_failed,
+          tx_count,
         }),
       ),
     ];

@@ -338,6 +338,7 @@ export const tpsHistorySchema = z.array(
     z.number(), // vote
     z.number(), // nonvote_success
     z.number(), // nonvote_failed
+    z.number(), // tx_count
   ]),
 );
 

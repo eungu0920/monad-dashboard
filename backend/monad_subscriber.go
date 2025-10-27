@@ -29,7 +29,7 @@ type MonadSubscriber struct {
 	maxRecentBlocks int
 
 	// TPS history for charting
-	tpsHistory      [][4]float64 // [total, vote, avg, instant]
+	tpsHistory      [][5]float64 // [total, vote, avg, instant, txCount]
 	maxHistorySize  int
 
 	ctx            context.Context
@@ -60,7 +60,7 @@ func NewMonadSubscriber(wsURL string) *MonadSubscriber {
 		errorChan:       make(chan error, 10),
 		recentBlocks:    make([]BlockTxInfo, 0, 10),
 		maxRecentBlocks: 10, // Track last 10 blocks (~4 seconds of data)
-		tpsHistory:      make([][4]float64, 0, 200),
+		tpsHistory:      make([][5]float64, 0, 200),
 		maxHistorySize:  200, // Keep 200 data points for chart (80 seconds of data)
 		ctx:             ctx,
 		cancel:          cancel,
@@ -313,12 +313,12 @@ func (s *MonadSubscriber) getInstantTPS() float64 {
 }
 
 // addTPSToHistory adds current TPS metrics to history for charting
-func (s *MonadSubscriber) addTPSToHistory(oneSecondTPS, avgTPS, instantTPS float64) {
+func (s *MonadSubscriber) addTPSToHistory(oneSecondTPS, avgTPS, instantTPS float64, txCount int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Add new data point: [total, vote, avg, instant]
-	s.tpsHistory = append(s.tpsHistory, [4]float64{oneSecondTPS, 0, avgTPS, instantTPS})
+	// Add new data point: [total, vote, avg, instant, txCount]
+	s.tpsHistory = append(s.tpsHistory, [5]float64{oneSecondTPS, 0, avgTPS, instantTPS, float64(txCount)})
 
 	// Keep only the most recent points
 	if len(s.tpsHistory) > s.maxHistorySize {
@@ -327,12 +327,12 @@ func (s *MonadSubscriber) addTPSToHistory(oneSecondTPS, avgTPS, instantTPS float
 }
 
 // getTPSHistory returns the full TPS history for charting
-func (s *MonadSubscriber) getTPSHistory() [][4]float64 {
+func (s *MonadSubscriber) getTPSHistory() [][5]float64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	// Make a copy to avoid race conditions
-	historyCopy := make([][4]float64, len(s.tpsHistory))
+	historyCopy := make([][5]float64, len(s.tpsHistory))
 	copy(historyCopy, s.tpsHistory)
 	return historyCopy
 }

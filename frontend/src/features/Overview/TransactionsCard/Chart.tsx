@@ -6,6 +6,7 @@ import { tpsDataAtom } from "./atoms";
 import {
   regularTextColor,
   transactionNonVotePathColor,
+  transactionTxCountPathColor,
 } from "../../../colors";
 
 const getPath = (points: { x: number; y: number }[], height: number) => {
@@ -24,8 +25,10 @@ export default function Chart() {
   const tpsData = useAtomValue(tpsDataAtom);
   const sizeRefs = useRef<{ height: number; width: number }>();
 
-  // Use Avg TPS (nonvote_success) for max scale instead of total
+  // Use both Avg TPS and Tx Count for max scale
   const maxTotalTps = Math.max(...tpsData.map((d) => d?.nonvote_success ?? 0));
+  const maxTxCount = Math.max(...tpsData.map((d) => d?.tx_count ?? 0));
+  const maxValue = Math.max(maxTotalTps, maxTxCount);
 
   const scaledPaths = useMemo(() => {
     if (!sizeRefs.current) return;
@@ -37,18 +40,19 @@ export default function Chart() {
 
     // Add padding and use full height for better visualization
     const padding = 15;
-    const yRatio = (height - padding * 2) / (maxTotalTps || 1);
+    const yRatio = (height - padding * 2) / (maxValue || 1);
 
     const points = tpsData
       .map((d, i) => {
         if (d === undefined) return;
 
-        // Only show Avg TPS (nonvote_success)
-        // Calculate y from top (SVG coordinate system)
+        // Calculate both TPS and Tx count
         const tpsValue = d.nonvote_success * yRatio;
+        const txValue = (d.tx_count ?? 0) * yRatio;
         return {
           x: i * xRatio,
-          avgY: height - padding - tpsValue, // Invert to draw from bottom up
+          avgY: height - padding - tpsValue, // Avg TPS (green)
+          txY: height - padding - txValue,   // Tx count (blue)
         };
       })
       .filter(isDefined);
@@ -61,9 +65,13 @@ export default function Chart() {
         points.map((p) => ({ x: p.x, y: p.avgY })),
         height,
       ),
+      txPath: getPath(
+        points.map((p) => ({ x: p.x, y: p.txY })),
+        height,
+      ),
       totalTpsY: maxTotalY,
     };
-  }, [maxTotalTps, tpsData]);
+  }, [maxValue, tpsData]);
 
   return (
     <>
@@ -79,11 +87,22 @@ export default function Chart() {
                 height={height}
                 fill="none"
               >
+                {/* Avg TPS path (green) */}
                 <path
                   fillRule="evenodd"
                   clipRule="evenodd"
                   d={scaledPaths.avgPath}
                   fill={transactionNonVotePathColor}
+                  opacity={0.7}
+                />
+
+                {/* Tx count path (blue) */}
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d={scaledPaths.txPath}
+                  fill={transactionTxCountPathColor}
+                  opacity={0.7}
                 />
 
                 {scaledPaths.totalTpsY && (
@@ -103,7 +122,7 @@ export default function Chart() {
                       fontSize="8"
                       fontFamily="Inter Tight"
                     >
-                      {maxTotalTps.toLocaleString()}
+                      {maxValue.toLocaleString()}
                     </text>
                   </>
                 )}
