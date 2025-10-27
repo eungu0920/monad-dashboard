@@ -254,78 +254,96 @@ func sendFiredancerUpdates(conn *websocket.Conn) {
 				return
 			}
 
-			// Send live txn waterfall (Monad-specific)
-			// Generate waterfall data from real-time subscriber metrics
-			waterfallData := GenerateWaterfallFromSubscriber()
-			waterfallIn := waterfallData["in"].(map[string]interface{})
-			waterfallOut := waterfallData["out"].(map[string]interface{})
+			// Send Monad waterfall (NEW: Monad lifecycle-aligned)
+			// Generate waterfall data using new Monad-specific structure
+			monadWaterfallData := GenerateMonadWaterfall()
 
 			// Debug: Log waterfall data source
-			if metadata, ok := waterfallData["metadata"].(map[string]interface{}); ok {
+			if metadata, ok := monadWaterfallData["metadata"].(map[string]interface{}); ok {
 				if source, ok := metadata["source"].(string); ok {
-					log.Printf("🌊 Waterfall source: %s, RPC=%v, Parallel=%v",
-						source, waterfallIn["rpc"], waterfallOut["exec_parallel"])
+					log.Printf("🌊 Monad Waterfall source: %s", source)
 				}
 			}
 
+			// Send NEW waterfall format (nodes + links for Sankey diagram)
 			waterfallMsg := FiredancerMessage{
+				Topic: "summary",
+				Key:   "monad_waterfall_v2",
+				Value: monadWaterfallData,
+			}
+			if err := conn.WriteJSON(waterfallMsg); err != nil {
+				log.Printf("Error sending Monad waterfall v2: %v", err)
+				return
+			}
+
+			// Also send legacy waterfall format for backward compatibility
+			// TODO: Remove after frontend is fully migrated to v2
+			legacyWaterfallData := GenerateWaterfallFromSubscriber()
+			waterfallIn := legacyWaterfallData["in"].(map[string]interface{})
+			waterfallOut := legacyWaterfallData["out"].(map[string]interface{})
+
+			legacyWaterfallMsg := FiredancerMessage{
 				Topic: "summary",
 				Key:   "live_txn_waterfall",
 				Value: map[string]interface{}{
 					"next_leader_slot": nil,
 					"waterfall": map[string]interface{}{
 						"in": map[string]interface{}{
-							// Monad ingress: RPC + P2P
-							"quic":           waterfallIn["rpc"],      // RPC transactions
-							"udp":            waterfallIn["p2p"],      // P2P gossip transactions
-							"gossip":         waterfallIn["gossip"],   // Same as P2P
+							"quic":           waterfallIn["rpc"],
+							"udp":            waterfallIn["p2p"],
+							"gossip":         waterfallIn["gossip"],
 							"pack_cranked":   0,
 							"pack_retained":  0,
 							"resolv_retained": 0,
 							"block_engine":   0,
 						},
 						"out": map[string]interface{}{
-							// Network drops
 							"net_overrun":           0,
 							"quic_overrun":          0,
 							"quic_frag_drop":        0,
 							"quic_abandoned":        0,
 							"tpu_quic_invalid":      0,
 							"tpu_udp_invalid":       0,
-
-							// Verification stage (Monad-specific)
 							"verify_overrun":        0,
 							"verify_parse":          0,
-							"verify_failed":         waterfallOut["verify_failed"],     // Signature verification
-							"verify_duplicate":      waterfallOut["nonce_failed"],      // Nonce check
-							"dedup_duplicate":       waterfallOut["nonce_failed"],      // Same as nonce
-
-							// Pool management (Monad-specific)
-							"resolv_lut_failed":     waterfallOut["balance_failed"],    // Balance check
-							"resolv_expired":        waterfallOut["pool_fee_dropped"],  // Fee too low
+							"verify_failed":         waterfallOut["verify_failed"],
+							"verify_duplicate":      waterfallOut["nonce_failed"],
+							"dedup_duplicate":       waterfallOut["nonce_failed"],
+							"resolv_lut_failed":     waterfallOut["balance_failed"],
+							"resolv_expired":        waterfallOut["pool_fee_dropped"],
 							"resolv_no_ledger":      0,
 							"resolv_ancient":        0,
 							"resolv_retained":       0,
-
-							// Block packing
 							"pack_invalid":          0,
 							"pack_invalid_bundle":   0,
 							"pack_retained":         0,
 							"pack_leader_slow":      0,
 							"pack_wait_full":        waterfallOut["pool_full"],
 							"pack_expired":          0,
-
-							// Execution (Monad EVM)
 							"bank_invalid":          waterfallOut["exec_failed"],
-							"block_success":         waterfallOut["exec_parallel"],       // Parallel EVM success
-							"block_fail":            waterfallOut["exec_sequential"],     // Sequential fallback
+							"block_success":         waterfallOut["exec_parallel"],
+							"block_fail":            waterfallOut["exec_sequential"],
 						},
 					},
 				},
 			}
-			if err := conn.WriteJSON(waterfallMsg); err != nil {
-				log.Printf("Error sending waterfall: %v", err)
+			if err := conn.WriteJSON(legacyWaterfallMsg); err != nil {
+				log.Printf("Error sending legacy waterfall: %v", err)
 				return
+			}
+
+			// Send MonadBFT consensus state
+			consensusTracker := GetConsensusTracker()
+			if consensusTracker != nil {
+				consensusStateMsg := FiredancerMessage{
+					Topic: "summary",
+					Key:   "monad_consensus_state",
+					Value: consensusTracker.GetConsensusState(),
+				}
+				if err := conn.WriteJSON(consensusStateMsg); err != nil {
+					log.Printf("Error sending consensus state: %v", err)
+					return
+				}
 			}
 
 			// Send vote distance

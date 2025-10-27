@@ -84,12 +84,18 @@ func main() {
 	{
 		api.GET("/health", handleHealth)
 		api.GET("/metrics", handleMetrics)
-		api.GET("/waterfall", handleWaterfall)
+		api.GET("/waterfall", handleWaterfall)  // Legacy waterfall
+		api.GET("/waterfall/v2", handleWaterfallV2)  // New Monad lifecycle waterfall
+		api.GET("/consensus", handleConsensusState)  // MonadBFT consensus state
 		api.GET("/event-rings", handleEventRingsStatus)
 	}
 
 	// WebSocket endpoint (Firedancer uses /websocket)
 	r.GET("/websocket", handleWebSocket)
+
+	// Initialize Consensus Tracker for MonadBFT phase tracking
+	InitializeConsensusTracker()
+	log.Printf("✅ MonadBFT Consensus Tracker initialized")
 
 	// Initialize event rings connection
 	if err := InitializeEventRings(); err != nil {

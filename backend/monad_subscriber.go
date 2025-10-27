@@ -519,6 +519,12 @@ func updateMetricsFromBlock(block *BlockHeader) {
 	metricsMutex.Lock()
 	defer metricsMutex.Unlock()
 
+	// Update consensus tracker with new block
+	consensusTracker := GetConsensusTracker()
+	if consensusTracker != nil {
+		consensusTracker.OnBlockProposed(uint64(block.Number), block.Hash, block.Transactions)
+	}
+
 	now := time.Now()
 
 	// Get network metrics (these don't change per block)

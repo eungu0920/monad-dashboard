@@ -377,3 +377,23 @@ func connectToMonadExecution() error {
 	fmt.Println("Connecting to Monad Execution...")
 	return nil
 }
+
+// handleWaterfallV2 returns new Monad lifecycle-aligned waterfall data
+func handleWaterfallV2(c *gin.Context) {
+	waterfallData := GenerateMonadWaterfall()
+	c.JSON(http.StatusOK, waterfallData)
+}
+
+// handleConsensusState returns MonadBFT consensus state
+func handleConsensusState(c *gin.Context) {
+	consensusTracker := GetConsensusTracker()
+	if consensusTracker == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Consensus tracker not initialized",
+		})
+		return
+	}
+
+	consensusState := consensusTracker.GetConsensusState()
+	c.JSON(http.StatusOK, consensusState)
+}

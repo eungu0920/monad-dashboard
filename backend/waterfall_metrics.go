@@ -219,9 +219,12 @@ func GenerateWaterfallFromSubscriber() map[string]interface{} {
 	// Calculate realistic waterfall based on actual transaction data
 	txCount := int64(block.Transactions)
 
-	// Stage 1: Network (assume 70% RPC, 30% P2P)
-	rpcReceived := txCount * 7 / 10
-	p2pReceived := txCount * 3 / 10
+	// Stage 1: Network
+	// For now, use block transactions as the baseline
+	// In a real scenario with low activity, most txs come from validators/internal
+	// Assume conservative split: 50% RPC, 50% P2P (more realistic for low activity)
+	rpcReceived := txCount * 5 / 10
+	p2pReceived := txCount * 5 / 10
 
 	// Stage 2: Verify (5% signature failures, 2% nonce, 1% balance)
 	totalIngress := rpcReceived + p2pReceived
