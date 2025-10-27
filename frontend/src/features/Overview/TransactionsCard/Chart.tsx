@@ -3,6 +3,7 @@ import { useMemo, useRef } from "react";
 import { isDefined } from "../../../utils";
 import { useAtomValue } from "jotai";
 import { tpsDataAtom } from "./atoms";
+import { maxTransactionChartPoints } from "./consts";
 import {
   regularTextColor,
   transactionNonVotePathColor,
@@ -34,8 +35,9 @@ export default function Chart() {
     if (!tpsData.length) return;
 
     const { height, width } = sizeRefs.current;
-    const maxLength = tpsData.length;
-    const xRatio = (width + 2) / maxLength;
+    // Use fixed maxTransactionChartPoints for x-axis, not actual data length
+    // This ensures graph fills full width even when data is still accumulating
+    const xRatio = (width + 2) / maxTransactionChartPoints;
 
     // Add padding and use full height for better visualization
     const padding = 15;
