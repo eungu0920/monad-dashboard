@@ -119,31 +119,8 @@ func (s *MonadSubscriber) Connect() error {
 	s.headsSubID = headsSubResponse.Result
 	log.Printf("Successfully subscribed to newHeads with subscription ID: %s", s.headsSubID)
 
-	// Subscribe to monadLogs (transaction logs for flow visualization)
-	logsSubMsg := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      2,
-		"method":  "eth_subscribe",
-		"params":  []interface{}{"monadLogs", map[string]interface{}{}}, // Empty filter = all logs
-	}
-
-	if err := conn.WriteJSON(logsSubMsg); err != nil {
-		return fmt.Errorf("failed to send monadLogs subscribe message: %w", err)
-	}
-
-	// Read monadLogs subscription confirmation
-	var logsSubResponse struct {
-		JSONRPC string `json:"jsonrpc"`
-		ID      int    `json:"id"`
-		Result  string `json:"result"`
-	}
-
-	if err := conn.ReadJSON(&logsSubResponse); err != nil {
-		return fmt.Errorf("failed to read monadLogs subscription response: %w", err)
-	}
-
-	s.logsSubID = logsSubResponse.Result
-	log.Printf("Successfully subscribed to monadLogs with subscription ID: %s", s.logsSubID)
+	// Note: Not subscribing to logs subscription as it only captures smart contract events
+	// We'll use transaction data from newHeads instead for more complete coverage
 
 	// Start listening for messages
 	go s.listen()
@@ -192,11 +169,9 @@ func (s *MonadSubscriber) listen() {
 					continue
 				}
 
-				// Route to appropriate handler
+				// Route to block handler (only newHeads subscription)
 				if subID == s.headsSubID {
 					s.handleBlockMessage(msg)
-				} else if subID == s.logsSubID {
-					s.handleLogsMessage(msg)
 				}
 			}
 		}
@@ -226,10 +201,9 @@ func (s *MonadSubscriber) handleBlockMessage(msg map[string]interface{}) {
 	s.latestBlock = header
 	s.mu.Unlock()
 
-	// Fetch full block details to get transaction count, then send to channel
-	// newHeads subscription doesn't include tx count, so we need to fetch it
+	// Fetch full block details to get transaction count and hashes
 	go func() {
-		// Enrich with transaction count first
+		// Enrich with transaction details first
 		s.enrichBlockWithTransactions(header)
 
 		// Now send the enriched block to the channel for metrics update
@@ -352,6 +326,11 @@ func (s *MonadSubscriber) enrichBlockWithTransactions(header *BlockHeader) {
 
 	log.Printf("Block %d: Epoch %d, Instant TPS: %.2f, Avg TPS: %.2f (txs=%d)",
 		header.Number, epoch, instantTPS, avgTPS, header.Transactions)
+
+	// Broadcast each transaction for Transaction Flow visualization
+	for i, txHash := range block.Result.Transactions {
+		broadcastTransactionFromBlock(header.Number, txHash, i, header.Timestamp)
+	}
 
 	// NOTE: Do NOT call updateMetricsFromBlock here!
 	// It will be called from processSubscribedBlocks to avoid duplicate updates
@@ -645,7 +624,7 @@ func InitializeSubscriber(wsURL string) error {
 	return nil
 }
 
-// processSubscribedBlocks processes incoming blocks, logs, and updates metrics
+// processSubscribedBlocks processes incoming blocks and updates metrics
 func processSubscribedBlocks() {
 	for {
 		select {
@@ -653,35 +632,37 @@ func processSubscribedBlocks() {
 			if block != nil {
 				updateMetricsFromBlock(block)
 			}
-		case txLog := <-monadSubscriber.LogsChannel():
-			if txLog != nil {
-				broadcastTransactionLog(txLog)
-			}
 		case err := <-monadSubscriber.errorChan:
 			log.Printf("Subscriber error: %v", err)
 		}
 	}
 }
 
-// broadcastTransactionLog sends transaction log to all connected WebSocket clients
-func broadcastTransactionLog(txLog *TransactionLog) {
+// broadcastTransactionFromBlock sends transaction info from block to all WebSocket clients
+func broadcastTransactionFromBlock(blockNumber int64, txHash string, txIndex int, timestamp int64) {
 	// Format as Firedancer protocol message
 	msg := map[string]interface{}{
 		"topic": "tx_flow",
 		"key":   "transaction_log",
 		"value": map[string]interface{}{
-			"block_number":      txLog.BlockNumber,
-			"transaction_hash":  txLog.TransactionHash,
-			"transaction_index": txLog.TransactionIndex,
-			"address":           txLog.Address,
-			"topics":            txLog.Topics,
-			"data":              txLog.Data,
-			"timestamp":         txLog.Timestamp,
+			"block_number":      blockNumber,
+			"transaction_hash":  txHash,
+			"transaction_index": txIndex,
+			"address":           "", // Not available from block header
+			"topics":            []string{},
+			"data":              "",
+			"timestamp":         timestamp,
 		},
 	}
 
 	// Broadcast to all connected clients (defined in main.go)
 	broadcastToAllClients(msg)
+}
+
+// broadcastTransactionLog sends transaction log to all connected WebSocket clients (DEPRECATED)
+func broadcastTransactionLog(txLog *TransactionLog) {
+	// This function is no longer used since we're not using logs subscription
+	// Kept for reference only
 }
 
 // updateMetricsFromBlock updates global metrics from a new block
